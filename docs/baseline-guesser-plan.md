@@ -150,7 +150,7 @@ The metric to optimize is **guesses per day**, which decomposes into *session le
 
 ### 3.4 Scoring service (pure Python module, no Django imports)
 
-`scoring.py` exposes pure functions — trivially unit-testable and reusable in analysis notebooks:
+`bglib/scoring.py` exposes pure functions — trivially unit-testable and reusable in analysis notebooks:
 
 - `guess_to_distribution(center, wl, wr) -> ParamDist`
 - `visible_score(guess, snapshot) -> ScoreBreakdown`
@@ -198,7 +198,7 @@ Each package is sized for a junior developer or an AI agent working ~1–3 days,
 **Accept:** `docker compose up` serves Django on :8000 and Vite on :5173; CI green; README quickstart works on a clean machine.
 
 ### WP-02 · Scoring library *(after WP-01)*
-**Goal:** pure `backend/wavelib/scoring.py` implementing the functions in §3.4.
+**Goal:** pure `backend/bglib/scoring.py` implementing the functions in §3.4.
 **TDD:** property-based tests (Hypothesis): CRPS non-negative, minimized by the true distribution; visible score in [0, 1000]; monotonicity in distance; calibration bonus decreasing in width once coverage achieved; bimodality detector flags synthetic two-peak histograms and not unimodal ones.
 **Accept:** ≥ 95% branch coverage; zero Django imports; docstring with the scoring formula for the game-design team.
 
