@@ -1,11 +1,11 @@
-# Societal Wavelength 🌊
+# Baseline Guesser
 
 Guess where *society* places things on scales like `sophisticated ↔ overly complicated`.
 Every guess is scored against the crowd — and doubles as a vote that sharpens the crowd
 baseline. The game simultaneously builds an open (Thing × Scale → human distribution)
 dataset with a parallel LLM-prediction track for AI-vs-human comparison.
 
-Full design & roadmap: see `docs/wavelength-society-plan.md` (work packages WP-01…WP-13).
+Full design & roadmap: see `docs/baseline-guesser-plan.md` (work packages WP-01…WP-13).
 This repository currently implements **WP-01: project skeleton & CI**.
 
 ## Stack
