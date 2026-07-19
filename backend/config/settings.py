@@ -91,3 +91,7 @@ REST_FRAMEWORK = {
 
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+# Account-claim magic-link delivery: "echo" returns the token in the API
+# response (dev/test); WP-11 adds real email delivery.
+CLAIM_LINK_DELIVERY = os.environ.get("CLAIM_LINK_DELIVERY", "echo")

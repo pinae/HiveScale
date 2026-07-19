@@ -57,6 +57,40 @@ yarn storybook                 # component workshop on :6006
 > peer declarations. `.yarnrc.yml` fixes these via `packageExtensions`, so a fresh
 > `yarn install` completes with zero warnings — keep it that way when adding deps.
 
+## Session API (WP-04) — curl demo
+
+Anonymous identity is a signed, httpOnly cookie; the raw device token never
+leaves the server, and anonymous players carry zero PII (email exists only on
+the auth user after a claim).
+
+```bash
+J=/tmp/bg-cookies.txt
+
+# 1. Start (or refresh) an anonymous session — creates a Player, sets the cookie
+curl -s -c $J -X POST http://localhost:8000/api/session/
+# {"player":{"level":1,"xp":0,"is_claimed":false},"created":true}
+
+# 2. Same cookie -> same player
+curl -s -b $J -c $J -X POST http://localhost:8000/api/session/
+# {"player":{...},"created":false}
+
+# 3. Profile
+curl -s -b $J http://localhost:8000/api/me/
+
+# 4. Claim the account (magic-link stub; "echo" delivery returns the token
+#    directly in dev — WP-11 will email it instead)
+TOKEN=$(curl -s -b $J -X POST -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com"}' \
+  http://localhost:8000/api/session/claim/request/ | jq -r .claim_token)
+
+# 5. Confirm: links the auth user, merges any prior history for that email,
+#    and rotates the cookie (the old anonymous token stops working)
+curl -s -b $J -c $J -X POST -H 'Content-Type: application/json' \
+  -d "{\"claim_token\":\"$TOKEN\"}" \
+  http://localhost:8000/api/session/claim/confirm/
+# {"player":{"level":1,"xp":0,"is_claimed":true},"merged":false}
+```
+
 ## TDD conventions (project-wide)
 
 1. Red → green → refactor: no production code without a failing test first.
@@ -84,4 +118,4 @@ docs/       planning document & work packages
 - [x] ruff, eslint, tsc, vitest, pytest, Storybook build all green
 - [x] README quickstart for clean machines (this file)
 
-Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (domain models, snapshot service, `seed_demo`). Next: **WP-04 (anonymous sessions)** and **WP-05 (pairing scheduler)**.
+Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (domain models & snapshots), **WP-04** (anonymous sessions & claiming). Next: **WP-05 (pairing scheduler)**, then **WP-06 (round API)**.

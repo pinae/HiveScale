@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from bglib.scoring import build_histogram, weighted_quantile
-from core.models import DistributionSnapshot, Pairing
+from core.models import DistributionSnapshot, Pairing, Player
 
 #: Answers submitted faster than this are stored but never enter the baseline
 #: (plan §1.7 — speed floor).
@@ -61,3 +61,52 @@ def recompute_snapshot(pairing: Pairing) -> DistributionSnapshot:
         pairing.graduated_at = timezone.now()
     pairing.save(update_fields=["n_answers", "graduated_at"])
     return snapshot
+
+
+# ---------------------------------------------------------------------------
+# Account claiming (WP-04)
+# ---------------------------------------------------------------------------
+
+
+def merge_players(source, target) -> None:
+    """Fold ``source``'s history into ``target`` and delete ``source``.
+
+    Guesses (with their RoundScores riding along via FK) move over, xp is
+    additive, level keeps the best, and calibration stats — being additive
+    counters — merge exactly.
+    """
+    source.guesses.update(player=target)
+    target.xp += source.xp
+    target.level = max(target.level, source.level)
+    merged_stats = dict(target.calibration_stats or {})
+    for key, value in (source.calibration_stats or {}).items():
+        merged_stats[key] = merged_stats.get(key, 0) + value
+    target.calibration_stats = merged_stats
+    target.save(update_fields=["xp", "level", "calibration_stats"])
+    source.delete()
+
+
+@transaction.atomic
+def claim_player(player, email: str) -> tuple[Player, bool]:
+    """Attach ``player`` to the account for ``email``, merging if it exists.
+
+    Returns ``(resulting_player, merged)``. Either way the anonymous device
+    token stops working afterwards: on a first claim the token is rotated, on
+    a merge the anonymous player row is deleted outright.
+    """
+    from django.contrib.auth import get_user_model
+
+    from core.sessions import rotate_device_token
+
+    email = email.strip().lower()
+    user, _ = get_user_model().objects.get_or_create(
+        username=email, defaults={"email": email}
+    )
+    existing = Player.objects.filter(user=user).exclude(pk=player.pk).first()
+    if existing is None:
+        player.user = user
+        player.save(update_fields=["user"])
+        rotate_device_token(player)
+        return player, False
+    merge_players(source=player, target=existing)
+    return existing, True
