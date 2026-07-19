@@ -84,4 +84,4 @@ docs/       planning document & work packages
 - [x] ruff, eslint, tsc, vitest, pytest, Storybook build all green
 - [x] README quickstart for clean machines (this file)
 
-Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring` — pure scoring library, 98% branch coverage). Next: **WP-03 (domain models)** and **WP-04 (sessions)**.
+Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (domain models, snapshot service, `seed_demo`). Next: **WP-04 (anonymous sessions)** and **WP-05 (pairing scheduler)**.

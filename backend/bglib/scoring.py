@@ -1,4 +1,4 @@
-"""Pure scoring library for Baseline Guesser.
+"""Pure scoring library for Baseline Guesser (WP-02).
 
 Zero Django imports — usable from API views, Celery workers, and analysis
 notebooks alike. All functions are deterministic and side-effect free.
@@ -225,7 +225,7 @@ def visible_score(guess: Guess, snapshot: SnapshotStats) -> ScoreBreakdown:
 
 
 def calibration_update(
-        stats: CalibrationStats, guess: Guess, snapshot: SnapshotStats
+    stats: CalibrationStats, guess: Guess, snapshot: SnapshotStats
 ) -> CalibrationStats:
     """Fold one round into a player's running calibration record (pure)."""
     low, high = guess.clamped_interval()
@@ -244,7 +244,7 @@ def calibration_update(
 
 
 def build_histogram(
-        values: Sequence[float], weights: Sequence[float] | None = None
+    values: Sequence[float], weights: Sequence[float] | None = None
 ) -> tuple[float, ...]:
     """Normalized ``N_BUCKETS`` histogram of guess centers, optionally weighted."""
     if not values:
@@ -259,6 +259,46 @@ def build_histogram(
         buckets[index] += weights[i] if weights is not None else 1.0
     total = sum(buckets)
     return tuple(b / total for b in buckets)
+
+
+def weighted_quantile(values: Sequence[float], weights: Sequence[float], q: float) -> float:
+    """Weighted Hazen quantile: inverts the piecewise-linear CDF through the
+    points ``(x_i, (S_i - w_i/2) / S_n)`` where ``S_i`` are cumulative weights
+    over the value-sorted sample.
+
+    For equal weights this reduces exactly to ``numpy.percentile(...,
+    method="hazen")``. Unlike the weighted "type 7" generalization, it is not
+    degenerate for small n, so fractional player weights (troll down-weighting)
+    actually move the crowd stats. Quantiles outside the outermost plotting
+    positions clamp to the extreme values.
+    """
+    if not values:
+        raise ValueError("cannot take a quantile of zero values")
+    if len(weights) != len(values):
+        raise ValueError("weights must match values in length")
+    if not 0.0 < q < 1.0:
+        raise ValueError("q must be strictly between 0 and 1")
+    if any(w <= 0.0 for w in weights):
+        raise ValueError("weights must be strictly positive")
+
+    pairs = sorted(zip(values, weights, strict=True))
+    total = sum(w for _, w in pairs)
+    positions: list[float] = []
+    running = 0.0
+    for _, weight in pairs:
+        running += weight
+        positions.append((running - weight / 2.0) / total)
+
+    if q <= positions[0]:
+        return pairs[0][0]
+    if q >= positions[-1]:
+        return pairs[-1][0]
+    for i in range(1, len(pairs)):
+        if q <= positions[i]:
+            span = positions[i] - positions[i - 1]
+            t = (q - positions[i - 1]) / span
+            return pairs[i - 1][0] + t * (pairs[i][0] - pairs[i - 1][0])
+    return pairs[-1][0]  # pragma: no cover - unreachable
 
 
 def quantile_from_histogram(histogram: Sequence[float], q: float) -> float:
@@ -301,10 +341,10 @@ def detect_bimodality(histogram: Sequence[float]) -> BimodalityReport:
     strong = [i for i in peak_indices if smoothed[i] >= _PEAK_HEIGHT_RATIO * tallest]
     best: tuple[float, tuple[int, int]] | None = None
     for a_pos, left in enumerate(strong):
-        for right in strong[a_pos + 1:]:
+        for right in strong[a_pos + 1 :]:
             if right - left < _MIN_PEAK_SEPARATION_BUCKETS:
                 continue
-            valley = min(smoothed[left: right + 1])
+            valley = min(smoothed[left : right + 1])
             dip_ratio = valley / min(smoothed[left], smoothed[right])
             if dip_ratio <= _MAX_DIP_RATIO and (best is None or dip_ratio < best[0]):
                 best = (dip_ratio, (left, right))
@@ -353,7 +393,7 @@ def _covered_fraction(guess: Guess, snapshot: SnapshotStats) -> float:
 def _smooth(histogram: Sequence[float]) -> list[float]:
     smoothed = []
     for i in range(N_BUCKETS):
-        window = histogram[max(0, i - 1): min(N_BUCKETS, i + 2)]
+        window = histogram[max(0, i - 1) : min(N_BUCKETS, i + 2)]
         smoothed.append(sum(window) / len(window))
     return smoothed
 

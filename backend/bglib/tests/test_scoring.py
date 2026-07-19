@@ -1,4 +1,8 @@
-"""
+"""WP-02 red tests: the pure scoring library.
+
+These tests are the executable specification for ``bglib.scoring`` and are
+committed BEFORE the implementation exists (TDD red).
+
 Covered properties (from docs/baseline-guesser-plan.md, WP-02):
 - CRPS non-negative, and zero exactly at the true distribution
 - visible score always within [0, 1000]
@@ -153,7 +157,7 @@ def test_visible_score_is_bounded(guess: Guess, snapshot: SnapshotStats) -> None
 
 @given(snapshots(), st.floats(min_value=0, max_value=49.9), st.floats(min_value=0.1, max_value=50))
 def test_distance_points_strictly_decrease_with_distance(
-        snapshot: SnapshotStats, d1: float, extra: float
+    snapshot: SnapshotStats, d1: float, extra: float
 ) -> None:
     d2 = d1 + extra
     for sign in (+1, -1):
@@ -168,7 +172,7 @@ def test_distance_points_strictly_decrease_with_distance(
 
 @given(snapshots(), st.floats(min_value=0.5, max_value=30))
 def test_calibration_bonus_decreases_with_width_once_iqr_is_covered(
-        snapshot: SnapshotStats, extra: float
+    snapshot: SnapshotStats, extra: float
 ) -> None:
     """Tight-and-right must beat loose-and-right (the risk dial)."""
     iqr_half = max(

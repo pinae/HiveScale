@@ -17,6 +17,7 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.5",
     "hypothesis>=6.157.0",
+    "numpy>=2.5.1",
 ]
 
 [tool.pytest.ini_options]
@@ -33,6 +34,9 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "DJ"]
+
+[tool.ruff.lint.per-file-ignores]
+"*/migrations/*" = ["E501"]  # generated code
 
 [tool.coverage.run]
 source = ["core", "config", "bglib"]
