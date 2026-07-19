@@ -1,9 +1,21 @@
 [project]
-name = "societal-wavelength-backend"
+name = "baseline-guesser-backend"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "django>=6.0.7",
+    "djangorestframework>=3.16",
+    "dj-database-url>=2.1",
+    "psycopg[binary]>=3.1",
+    "gunicorn>=22.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "pytest-django>=4.8",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
 ]
 
 [tool.pytest.ini_options]

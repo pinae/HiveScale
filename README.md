@@ -10,9 +10,12 @@ This repository currently implements **WP-01: project skeleton & CI**.
 
 ## Stack
 
-- **backend/** — Django 5 + Django REST Framework, PostgreSQL, Redis (Celery later), pytest, ruff
-- **frontend/** — React 18 + TypeScript, Vite, Vitest + Testing Library, Storybook 8, ESLint
-- **CI** — GitHub Actions: ruff + pytest (with Postgres service), eslint + tsc + vitest + Storybook build
+- **backend/** — Django 6 + Django REST Framework, PostgreSQL, Redis (Celery later); **uv** for
+  dependency management (`pyproject.toml` + `uv.lock`), pytest, ruff
+- **frontend/** — React 19 + TypeScript, Vite 6, Vitest 4 + Testing Library, Storybook 8, ESLint 10;
+  **Yarn 4** via corepack (pinned by the `packageManager` field)
+- **CI** — GitHub Actions: ruff + pytest via `uv run` (with Postgres service),
+  eslint + tsc + vitest + Storybook build via `yarn` with `--immutable` installs
 
 ## Quickstart (docker-compose)
 
@@ -31,23 +34,28 @@ Backend (sqlite fallback — zero services needed for the TDD loop):
 
 ```bash
 cd backend
-pip install -r requirements-dev.txt
-pytest                 # unit + API tests
-ruff check .           # lint
-python manage.py migrate && python manage.py runserver
+uv sync                        # creates .venv from uv.lock (dev group included)
+uv run pytest                  # unit + API tests
+uv run ruff check .            # lint
+uv run python manage.py migrate && uv run python manage.py runserver
 ```
 
 Frontend:
 
 ```bash
 cd frontend
-npm install
-npm test               # vitest
-npm run lint           # eslint
-npx tsc -b             # typecheck
-npm run dev            # http://localhost:5173 (proxies /api to :8000)
-npm run storybook      # component workshop on :6006
+corepack enable                # activates the pinned yarn 4 automatically
+yarn install --immutable
+yarn test                      # vitest
+yarn lint                      # eslint
+yarn tsc -b                    # typecheck
+yarn dev                       # http://localhost:5173 (proxies /api to :8000)
+yarn storybook                 # component workshop on :6006
 ```
+
+> Peer-dependency note: Storybook 8.6 ships a few transitive packages with missing
+> peer declarations. `.yarnrc.yml` fixes these via `packageExtensions`, so a fresh
+> `yarn install` completes with zero warnings — keep it that way when adding deps.
 
 ## TDD conventions (project-wide)
 

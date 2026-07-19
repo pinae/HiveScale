@@ -28,14 +28,14 @@ export default function App() {
   }, []);
 
   return (
-    <main className="sw-shell">
+    <main className="bsg-shell">
       <WaveMark size={96} />
-      <h1 className="sw-title">Societal Wavelength</h1>
-      <p className="sw-tagline">
+      <h1 className="bsg-title">Baseline Guesser</h1>
+      <p className="bsg-tagline">
         Guess where society stands. Every guess makes the wave smarter.
       </p>
-      <p className="sw-status" role="status" data-state={backend}>
-        <span className="sw-status-dot" aria-hidden="true" />
+      <p className="bsg-status" role="status" data-state={backend}>
+        <span className="bsg-status-dot" aria-hidden="true" />
         {STATUS_LABEL[backend]}
       </p>
     </main>

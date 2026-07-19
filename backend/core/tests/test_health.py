@@ -12,7 +12,7 @@ def test_health_endpoint_returns_ok() -> None:
     client = APIClient()
     response = client.get("/api/health/")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"status": "ok", "service": "societal-wavelength"}
+    assert response.json() == {"status": "ok", "service": "baseline-guesser"}
 
 
 def test_health_endpoint_rejects_post() -> None:

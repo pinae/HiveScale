@@ -12,7 +12,7 @@ describe("App shell", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
     render(<App />);
     expect(
-      screen.getByRole("heading", { name: /societal wavelength/i }),
+      screen.getByRole("heading", { name: /baseline guesser/i }),
     ).toBeInTheDocument();
   });
 

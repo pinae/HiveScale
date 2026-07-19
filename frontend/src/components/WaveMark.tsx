@@ -7,16 +7,16 @@ export interface WaveMarkProps {
 }
 
 const WAVES = [
-  { d: "M0 34 Q 15 22, 30 34 T 60 34", stroke: "var(--sw-wave)", delay: "0s" },
-  { d: "M0 40 Q 15 30, 30 40 T 60 40", stroke: "var(--sw-wave-deep)", delay: "0.25s" },
-  { d: "M0 28 Q 15 18, 30 28 T 60 28", stroke: "var(--sw-accent)", delay: "0.5s" },
+  { d: "M0 34 Q 15 22, 30 34 T 60 34", stroke: "var(--bsg-wave)", delay: "0s" },
+  { d: "M0 40 Q 15 30, 30 40 T 60 40", stroke: "var(--bsg-wave-deep)", delay: "0.25s" },
+  { d: "M0 28 Q 15 18, 30 28 T 60 28", stroke: "var(--bsg-accent)", delay: "0.5s" },
 ];
 
 export default function WaveMark({ size = 64, animated = true }: WaveMarkProps) {
   return (
     <svg
       role="img"
-      aria-label="Societal Wavelength logo"
+      aria-label="Baseline Guesser logo"
       width={size}
       height={size}
       viewBox="0 0 60 60"
