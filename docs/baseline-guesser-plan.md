@@ -1,4 +1,4 @@
-# Societal Wavelength — Planning Document
+# Baseline Guesser — Planning Document
 
 *A crowd-calibration guessing game that doubles as an alignment-dataset factory.*
 
@@ -119,8 +119,8 @@ The metric to optimize is **guesses per day**, which decomposes into *session le
 
 ### 3.1 Stack
 
-- **Backend:** Django 5 + Django REST Framework, PostgreSQL, Celery + Redis (async Gemini calls, snapshot recomputation), `pytest-django`.
-- **Frontend:** React 18 + TypeScript, Vite, Zustand (state), TanStack Query (API), Framer Motion (reveal animations), Storybook 8 (component workshop + interaction tests), Playwright (e2e).
+- **Backend:** Django 6 + Django REST Framework, PostgreSQL, Celery + Redis (async Gemini calls, snapshot recomputation), `pytest-django`.
+- **Frontend:** React 19 + TypeScript, Vite, Zustand (state), TanStack Query (API), Framer Motion (reveal animations), Storybook 8 (component workshop + interaction tests), Playwright (e2e).
 - **LLM:** Gemini API via the official `google-genai` Python SDK, called only from Celery workers, never from request threads. Responses validated against a JSON schema; failures retried then fall back to "pure pioneer mode" (no provisional feedback).
 - **Auth:** anonymous session with signed device token → optional upgrade to email/OAuth account, preserving history.
 
