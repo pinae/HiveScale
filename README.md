@@ -118,4 +118,4 @@ docs/       planning document & work packages
 - [x] ruff, eslint, tsc, vitest, pytest, Storybook build all green
 - [x] README quickstart for clean machines (this file)
 
-Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (domain models & snapshots), **WP-04** (anonymous sessions & claiming). Next: **WP-05 (pairing scheduler)**, then **WP-06 (round API)**.
+Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (models & snapshots), **WP-04** (sessions & claiming), **WP-05** (pairing scheduler — 60/30/10 mix, blind deals, ~1.5 ms). Next: **WP-06 (round API)** and **WP-07 (Gemini cold-start worker)** — parallelizable.

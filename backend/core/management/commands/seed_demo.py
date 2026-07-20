@@ -94,6 +94,9 @@ class Command(BaseCommand):
 
         total_guesses = 0
         for pairing in pairings:
+            if rng.random() < 0.10:
+                continue  # leave ~10% brand-new: feeds the fresh bucket (WP-05)
+                # and the AI cold-start / pioneer path (WP-06/07)
             true_center = rng.uniform(8, 92)
             spread = rng.uniform(4, 18)
             batch = []
@@ -123,10 +126,11 @@ class Command(BaseCommand):
                 pass  # every answer happened to be flagged; pairing stays fresh
 
         graduated = Pairing.objects.filter(graduated_at__isnull=False).count()
+        fresh = Pairing.objects.filter(n_answers=0).count()
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded {len(things)} things, {len(scales)} scales, "
                 f"{len(pairings)} pairings, {N_PLAYERS} players, "
-                f"{total_guesses} guesses ({graduated} pairings graduated)."
+                f"{total_guesses} guesses ({graduated} graduated, {fresh} fresh pairings)."
             )
         )
