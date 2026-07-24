@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "core",
 ]
 
@@ -87,6 +88,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# Contract-first API (plan §4.1): the OpenAPI schema published at /api/schema/
+# is the single source of truth the frontend MSW mocks are generated from.
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Baseline Guesser API",
+    "DESCRIPTION": "Crowd-calibration guessing game — deal, guess, reveal.",
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")

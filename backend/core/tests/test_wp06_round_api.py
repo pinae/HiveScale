@@ -335,7 +335,7 @@ def test_the_sixteenth_answer_flips_from_pioneer_to_human_scoring() -> None:
 
 
 def test_openapi_schema_is_published_and_covers_the_round_endpoints() -> None:
-    response = APIClient().get("/api/schema/?format=openapi-json")
+    response = APIClient().get("/api/schema/?format=json")
     assert response.status_code == status.HTTP_200_OK
     paths = response.json()["paths"]
     assert "/api/round/next/" in paths

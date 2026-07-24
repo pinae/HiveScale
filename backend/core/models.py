@@ -28,6 +28,7 @@ class Player(models.Model):
     device_token = models.CharField(max_length=64, unique=True)
     level = models.PositiveIntegerField(default=1)
     xp = models.PositiveIntegerField(default=0)
+    hot_streak = models.PositiveIntegerField(default=0, help_text="Consecutive good rounds.")
     calibration_stats = models.JSONField(default=dict, blank=True)
     weight = models.FloatField(default=1.0, help_text="Baseline weight; 0 excludes silently.")
     created_at = models.DateTimeField(auto_now_add=True)
