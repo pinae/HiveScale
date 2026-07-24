@@ -32,5 +32,16 @@ export default [
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
   },
+  {
+    // Node build scripts (OpenAPI -> MSW mock generation).
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        URL: "readonly",
+        console: "readonly",
+        process: "readonly",
+      },
+    },
+  },
   ...storybook.configs["flat/recommended"],
 ];
