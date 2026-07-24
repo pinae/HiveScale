@@ -103,6 +103,11 @@ SPECTACULAR_SETTINGS = {
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
+# Gemini cold-start worker (WP-07). The key is absent in dev/CI; the worker is
+# always faked in tests and the one real-API test is @external (run manually).
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+
 # Account-claim magic-link delivery: "echo" returns the token in the API
 # response (dev/test); WP-11 adds real email delivery.
 CLAIM_LINK_DELIVERY = os.environ.get("CLAIM_LINK_DELIVERY", "echo")

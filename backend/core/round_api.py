@@ -39,6 +39,7 @@ from core.models import Guess, Pairing, RoundScore
 from core.scheduler import NoPairingAvailable, deal, serialize_deal
 from core.services import SPEED_FLOOR_MS, eligible_guesses, recompute_snapshot
 from core.sessions import resolve_player
+from core.tasks import schedule_cold_start
 
 #: Flat reward for answering an ungraduated pairing. Deliberately a touch above
 #: the expected value of a normal round so pioneering never feels like unpaid
@@ -100,6 +101,9 @@ def next_round(request) -> Response:
         return Response(
             {"detail": "No pairings available."}, status=status.HTTP_404_NOT_FOUND
         )
+    # A brand-new pairing has no baseline yet — kick off the AI cold start
+    # (best-effort; the deal never fails if the worker/broker is unavailable).
+    schedule_cold_start(pairing)
     payload = serialize_deal(pairing)
     payload["round_token"] = issue_round_token(pairing, player)
     return Response(payload)
