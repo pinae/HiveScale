@@ -1,0 +1,332 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Baseline Guesser API",
+        "version": "0.1.0",
+        "description": "Crowd-calibration guessing game — deal, guess, reveal."
+    },
+    "paths": {
+        "/api/health/": {
+            "get": {
+                "operationId": "health_retrieve",
+                "description": "Liveness probe used by docker-compose healthchecks, CI, and Playwright.",
+                "tags": [
+                    "health"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/me/": {
+            "get": {
+                "operationId": "me_retrieve",
+                "tags": [
+                    "me"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/round/guess/": {
+            "post": {
+                "operationId": "round_guess_create",
+                "description": "Submit a guess for a dealt round and receive the reveal payload.",
+                "tags": [
+                    "round"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                },
+                                "examples": {
+                                    "RevealHuman": {
+                                        "value": {
+                                            "source": "human",
+                                            "counted": true,
+                                            "score": {
+                                                "total": 853.7,
+                                                "distance_points": 600.0,
+                                                "calibration_points": 253.7,
+                                                "covered_fraction": 0.71
+                                            },
+                                            "crowd": {
+                                                "histogram": [
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.2,
+                                                    0.3,
+                                                    0.3,
+                                                    0.2,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0,
+                                                    0.0
+                                                ],
+                                                "median": 52.5,
+                                                "q25": 41.1,
+                                                "q75": 63.8,
+                                                "n": 23
+                                            },
+                                            "percentile": 83.0,
+                                            "bimodal": false,
+                                            "streak": {
+                                                "hot": 3
+                                            },
+                                            "player": {
+                                                "xp": 4212,
+                                                "level": 2
+                                            }
+                                        },
+                                        "summary": "reveal_human"
+                                    },
+                                    "RevealPioneer": {
+                                        "value": {
+                                            "source": "pioneer",
+                                            "counted": true,
+                                            "pioneer_bonus": 550,
+                                            "ai_estimate": {
+                                                "provisional": true,
+                                                "median": 62.0,
+                                                "q25": 50.0,
+                                                "q75": 74.0,
+                                                "histogram": [
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05,
+                                                    0.05
+                                                ]
+                                            },
+                                            "streak": {
+                                                "hot": 3
+                                            },
+                                            "player": {
+                                                "xp": 4762,
+                                                "level": 2
+                                            }
+                                        },
+                                        "summary": "reveal_pioneer"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/round/next/": {
+            "get": {
+                "operationId": "round_next_retrieve",
+                "description": "Deal the next blind round (plan §1.5: no distribution data leaves here).",
+                "tags": [
+                    "round"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                },
+                                "examples": {
+                                    "Deal": {
+                                        "value": {
+                                            "round_token": "eyJwIjoxLi4ufQ:signed",
+                                            "pairing_id": 1,
+                                            "thing": {
+                                                "text": "Robotic lawnmower"
+                                            },
+                                            "scale": {
+                                                "left": "sophisticated",
+                                                "right": "overly complicated"
+                                            }
+                                        },
+                                        "summary": "deal"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/session/": {
+            "post": {
+                "operationId": "session_create",
+                "description": "Create or refresh the anonymous session (plan §2.3: zero-login play).",
+                "tags": [
+                    "session"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/session/claim/confirm/": {
+            "post": {
+                "operationId": "session_claim_confirm_create",
+                "description": "Finish a claim: verify the magic-link token, link or merge, re-cookie.",
+                "tags": [
+                    "session"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/session/claim/request/": {
+            "post": {
+                "operationId": "session_claim_request_create",
+                "description": "Start an account claim: issue a signed magic-link token for an email.\n\nDelivery is a stub (WP-04): in ``echo`` mode (dev/test default) the token\nis returned in the response; WP-11 replaces this with an actual email.",
+                "tags": [
+                    "session"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "basicAuth": {
+                "type": "http",
+                "scheme": "basic"
+            },
+            "cookieAuth": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "sessionid"
+            }
+        }
+    }
+}

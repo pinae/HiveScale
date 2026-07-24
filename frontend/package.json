@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "mocks:generate": "cd ../backend && uv run python manage.py spectacular --format openapi-json --file ../frontend/src/mocks/openapi.json && cd ../frontend && node scripts/generate-mocks.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
@@ -38,6 +39,7 @@
     "eslint-plugin-storybook": "^0.12.0",
     "glob": "^13.0.6",
     "jsdom": "^29.1.1",
+    "msw": "^2.15.0",
     "storybook": "^8.6.18",
     "typescript": "~6.0.0",
     "uuid": "^14.0.1",
