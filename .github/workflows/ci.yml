@@ -26,15 +26,16 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install -r requirements-dev.txt
+          enable-cache: true
+      - name: Sync dependencies (frozen to uv.lock)
+        run: uv sync --frozen
       - name: Lint (ruff)
-        run: ruff check .
+        run: uv run ruff check .
       - name: Tests (pytest, external APIs excluded)
-        run: pytest -m "not external" --cov --cov-report=term-missing
+        run: uv run pytest -m "not external" --cov --cov-report=term-missing
 
   frontend:
     runs-on: ubuntu-latest
@@ -46,15 +47,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci --no-audit --no-fund
+      - name: Enable Corepack (activates the pinned Yarn 4)
+        run: corepack enable
+      - name: Install (immutable)
+        run: yarn install --immutable
       - name: Lint (eslint)
-        run: npx eslint .
+        run: yarn lint
       - name: Typecheck (tsc)
-        run: npx tsc -b
+        run: yarn tsc -b
       - name: Unit tests (vitest)
-        run: npx vitest run
+        run: yarn test
       - name: Storybook build (component workshop must stay green)
-        run: npm run build-storybook -- --quiet
+        run: yarn build-storybook --quiet
       # WP-12 adds: storybook test-runner + Playwright e2e against docker compose.
