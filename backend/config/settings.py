@@ -13,6 +13,15 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+# Dev front end runs on Vite (:5173). With the default Vite proxy, API calls are
+# same-origin; these settings additionally support pointing the SPA straight at
+# the backend (cross-origin) and keep Django's CSRF origin check happy for any
+# session-authenticated views (e.g. the admin) reached across origins.
+_DEV_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+CORS_ALLOWED_ORIGINS = os.environ.get("DJANGO_CORS_ALLOWED_ORIGINS", _DEV_ORIGINS).split(",")
+CORS_ALLOW_CREDENTIALS = True  # the bg_player session cookie must ride along
+CSRF_TRUSTED_ORIGINS = os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", _DEV_ORIGINS).split(",")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -22,11 +31,15 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "corsheaders",
     "core",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # CorsMiddleware must precede CommonMiddleware so preflight/ACAO headers are
+    # attached before any response-shaping runs.
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -89,6 +102,11 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # The game API authenticates via its own signed bg_player cookie (WP-04) and
+    # its state-changing calls carry signed tokens (round/claim). It must not use
+    # Django-session auth — otherwise DRF's SessionAuthentication runs the CSRF
+    # origin check on a same-browser admin session and rejects the dev frontend.
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
 }
 
 # Contract-first API (plan §4.1): the OpenAPI schema published at /api/schema/
