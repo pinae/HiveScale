@@ -6,12 +6,15 @@ baseline. The game simultaneously builds an open (Thing × Scale → human distr
 dataset with a parallel LLM-prediction track for AI-vs-human comparison.
 
 Full design & roadmap: see `docs/baseline-guesser-plan.md` (work packages WP-01…WP-13).
-This repository currently implements **WP-01: project skeleton & CI**.
+Implemented so far: **WP-01…WP-09** — the full backend game loop (scoring, models,
+sessions, scheduler, round API, Gemini cold-start worker) plus the React round
+primitives and reveal in the Storybook workshop. See the status list at the bottom.
 
 ## Stack
 
-- **backend/** — Django 6 + Django REST Framework, PostgreSQL, Redis (Celery later); **uv** for
-  dependency management (`pyproject.toml` + `uv.lock`), pytest, ruff
+- **backend/** — Django 6 + Django REST Framework, PostgreSQL, Celery + Redis (async
+  Gemini cold-start worker); **uv** for dependency management (`pyproject.toml` +
+  `uv.lock`), pytest, ruff
 - **frontend/** — React 19 + TypeScript, Vite 6, Vitest 4 + Testing Library, Storybook 8, ESLint 10;
   **Yarn 4** via corepack (pinned by the `packageManager` field)
 - **CI** — GitHub Actions: ruff + pytest via `uv run` (with Postgres service),
@@ -91,6 +94,63 @@ curl -s -b $J -c $J -X POST -H 'Content-Type: application/json' \
 # {"player":{"level":1,"xp":0,"is_claimed":true},"merged":false}
 ```
 
+## Round API (WP-06) — curl demo
+
+The core loop is a blind deal followed by a scored reveal. `GET /api/round/next/`
+returns a signed `round_token` and **no** distribution data (the blind guarantee);
+`POST /api/round/guess/` measures the response time server-side from the token,
+scores the guess against the crowd snapshot *as it stood before the guess*, and
+returns the reveal payload.
+
+```bash
+J=/tmp/bg-cookies.txt
+curl -s -c $J -X POST http://localhost:8000/api/session/ >/dev/null
+
+# 1. Deal a blind round (carries a signed token; no histogram/median)
+curl -s -b $J http://localhost:8000/api/round/next/
+# {"pairing_id":1,"thing":{"text":"Robotic lawnmower"},
+#  "scale":{"left":"sophisticated","right":"overly complicated"},"round_token":"…"}
+
+# 2. Submit a guess with that token -> score + crowd reveal
+TOKEN=…   # the round_token from step 1
+curl -s -b $J -X POST -H 'Content-Type: application/json' \
+  -d "{\"round_token\":\"$TOKEN\",\"center\":53,\"width_left\":12,\"width_right\":12}" \
+  http://localhost:8000/api/round/guess/
+# {"source":"human","counted":true,
+#  "score":{"total":924.4,"distance_points":583.6,"calibration_points":340.9,"covered_fraction":1.0},
+#  "crowd":{"histogram":[…20 buckets…],"median":50.0,"q25":46.5,"q75":53.5,"n":20},
+#  "percentile":50.0,"bimodal":false,"streak":{"hot":1},"player":{"xp":924,"level":1}}
+```
+
+Answers under the 1.5 s speed floor are stored but flagged `too_fast` — revealed for
+fun, but they earn no xp/streak and never enter the baseline. Under-sampled pairings
+return a `pioneer` payload (flat bonus + an optional clearly-labeled AI estimate)
+instead; once 15 eligible answers exist the pairing graduates and the next guess is
+scored against the human crowd.
+
+**OpenAPI & mocks.** The schema is published at `/api/schema/` (drf-spectacular).
+Frontend MSW handlers are generated from it: `cd frontend && yarn mocks:generate`
+rebuilds `src/mocks/openapi.json` + `handlers.generated.ts`, and a vitest drift guard
+fails if any endpoint loses its mock.
+
+## AI cold-start worker (WP-07)
+
+The first deal of a fresh pairing enqueues a Celery task that asks Gemini (official
+`google-genai` SDK) for a provisional distribution, validated against a JSON schema and
+stored as an `AIDistribution` — a research artifact that is **never** blended into the
+human baseline. Set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`, default
+`gemini-2.0-flash`) to enable it; without a key, or after repeated malformed responses,
+the round falls back to pure pioneer mode. Gemini is always faked in tests, with one
+`@external` smoke test that hits the real API and is excluded from CI.
+
+## Component workshop (WP-08 / WP-09)
+
+The round primitives — `WaveSlider` (one-thumb guess + confidence interval),
+`IntervalHandle`, `ScaleHeader`, `ThingCard` — and the `RevealWave` payoff (crowd
+histogram, count-up score, percentile stinger, outcome quips, bimodality + beat-the-bot
+variants) live in Storybook with a story per state: `cd frontend && yarn storybook`.
+They are not wired into the running app yet — that's WP-10.
+
 ## TDD conventions (project-wide)
 
 1. Red → green → refactor: no production code without a failing test first.
@@ -118,4 +178,4 @@ docs/       planning document & work packages
 - [x] ruff, eslint, tsc, vitest, pytest, Storybook build all green
 - [x] README quickstart for clean machines (this file)
 
-Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (models & snapshots), **WP-04** (sessions & claiming), **WP-05** (pairing scheduler — 60/30/10 mix, blind deals, ~1.5 ms). Next: **WP-06 (round API)** and **WP-07 (Gemini cold-start worker)** — parallelizable.
+Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (models & snapshots), **WP-04** (sessions & claiming), **WP-05** (pairing scheduler — 60/30/10 mix, blind deals), **WP-06** (round API: deal → guess → reveal, OpenAPI schema, generated MSW mocks), **WP-07** (Gemini cold-start worker + Celery), **WP-08** (React guess primitives), **WP-09** (`RevealWave` + score panel). Next: **WP-10 (game loop screen)** wires the WP-08/09 components to the round API.
