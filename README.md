@@ -6,10 +6,11 @@ baseline. The game simultaneously builds an open (Thing × Scale → human distr
 dataset with a parallel LLM-prediction track for AI-vs-human comparison.
 
 Full design & roadmap: see `docs/baseline-guesser-plan.md` (work packages WP-01…WP-13).
-Implemented so far: **WP-01…WP-10** — the full backend game loop (scoring, models,
-sessions, scheduler, round API, Gemini cold-start worker) and a playable React
-front end that boots straight into the deal → guess → reveal loop. See the status
-list at the bottom.
+Implemented so far: **WP-01…WP-11** — the full backend game loop (scoring, models,
+sessions, scheduler, round API, Gemini cold-start worker) with the meta layer
+(streaks, Daily Wave, stats/archetypes, gated content submission), and a playable
+React front end that boots straight into the deal → guess → reveal loop. See the
+status list at the bottom.
 
 ## Stack
 
@@ -184,4 +185,6 @@ docs/       planning document & work packages
 - [x] ruff, eslint, tsc, vitest, pytest, Storybook build all green
 - [x] README quickstart for clean machines (this file)
 
-Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (models & snapshots), **WP-04** (sessions & claiming), **WP-05** (pairing scheduler — 60/30/10 mix, blind deals), **WP-06** (round API: deal → guess → reveal, OpenAPI schema, generated MSW mocks), **WP-07** (Gemini cold-start worker + Celery), **WP-08** (React guess primitives), **WP-09** (`RevealWave` + score panel), **WP-10** (playable game loop screen: preloading, optimistic submit, too-fast toast, error/offline retry). Next: **WP-11 (meta layer — streaks, Daily Wave, stats, content submission)** and **WP-12 (Playwright e2e)**.
+Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (models & snapshots), **WP-04** (sessions & claiming), **WP-05** (pairing scheduler — 60/30/10 mix, blind deals), **WP-06** (round API: deal → guess → reveal, OpenAPI schema, generated MSW mocks), **WP-07** (Gemini cold-start worker + Celery), **WP-08** (React guess primitives), **WP-09** (`RevealWave` + score panel), **WP-10** (playable game loop screen: preloading, optimistic submit, too-fast toast, error/offline retry), **WP-11** (meta layer: daily streaks + freezes, `generate_daily_wave` command + emoji share string, `/api/me/stats/` archetypes from a config file, level-gated content submission with an LLM sanity check + admin moderation queue, and a stats page). Next: **WP-12 (Playwright e2e)** and **WP-13 (research export)**.
+
+Partial in WP-11 (APIs/services + tests done; wider UI/endpoints still to come): the Daily Wave has a generator + share string but not yet the `/api/daily-wave/` play endpoints; content submission has the gated API + moderation queue but not yet an in-app submission form.
