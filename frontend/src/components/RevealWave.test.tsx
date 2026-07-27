@@ -111,7 +111,7 @@ describe("RevealWave (pioneer)", () => {
   it("pays the pioneer bonus without a crowd or percentile", () => {
     render(<RevealWave reveal={pioneer} guess={{ center: 40, widthLeft: 10, widthRight: 10 }} animate={false} />);
     expect(screen.getByText(/550/)).toBeInTheDocument();
-    expect(screen.getByText(/pioneer/i)).toBeInTheDocument();
+    expect(screen.getByText(/pioneer round/i)).toBeInTheDocument();
     expect(screen.queryAllByTestId("reveal-hist-bar")).toHaveLength(0);
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
   });
