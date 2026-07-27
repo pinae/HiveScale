@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 
-import IntervalHandle from "./IntervalHandle";
+import IntervalHandle from "../IntervalHandle";
 
 export interface GuessValue {
   center: number;

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
 import RevealWave from "./RevealWave";
-import type { HumanReveal, PioneerReveal } from "../api/reveal";
+import type { HumanReveal, PioneerReveal } from "../../api/reveal";
 
 /** Build a normalized 20-bucket histogram peaked at the given buckets. */
 function hist(...peaks: number[]): number[] {

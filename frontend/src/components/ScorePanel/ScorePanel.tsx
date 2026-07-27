@@ -4,8 +4,8 @@
  */
 import { useEffect, useState } from "react";
 
-import type { ScoreBreakdown } from "../api/reveal";
-import type { OutcomeClass } from "./reveal-outcome";
+import type { ScoreBreakdown } from "../../api/reveal";
+import type { OutcomeClass } from "../RevealWave/reveal-outcome";
 
 export interface ScorePanelProps {
   score: ScoreBreakdown;

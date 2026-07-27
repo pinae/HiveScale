@@ -10,7 +10,7 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import RevealWave from "./RevealWave";
-import type { HumanReveal, PioneerReveal } from "../api/reveal";
+import type { HumanReveal, PioneerReveal } from "../../api/reveal";
 
 const crowdHistogram = Array.from({ length: 20 }, (_, i) => (i >= 8 && i <= 12 ? 0.2 : 0));
 

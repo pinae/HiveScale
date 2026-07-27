@@ -12,10 +12,10 @@
  */
 import { useEffect, useState } from "react";
 
-import type { AiEstimate, RevealPayload } from "../api/reveal";
-import ScorePanel from "./ScorePanel";
+import type { AiEstimate, RevealPayload } from "../../api/reveal";
+import ScorePanel from "../ScorePanel";
 import { beatMargin, classifyOutcome, pickQuip } from "./reveal-outcome";
-import type { GuessValue } from "./WaveSlider";
+import type { GuessValue } from "../WaveSlider";
 
 export interface RevealWaveProps {
   reveal: RevealPayload;
