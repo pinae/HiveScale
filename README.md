@@ -6,9 +6,10 @@ baseline. The game simultaneously builds an open (Thing × Scale → human distr
 dataset with a parallel LLM-prediction track for AI-vs-human comparison.
 
 Full design & roadmap: see `docs/baseline-guesser-plan.md` (work packages WP-01…WP-13).
-Implemented so far: **WP-01…WP-09** — the full backend game loop (scoring, models,
-sessions, scheduler, round API, Gemini cold-start worker) plus the React round
-primitives and reveal in the Storybook workshop. See the status list at the bottom.
+Implemented so far: **WP-01…WP-10** — the full backend game loop (scoring, models,
+sessions, scheduler, round API, Gemini cold-start worker) and a playable React
+front end that boots straight into the deal → guess → reveal loop. See the status
+list at the bottom.
 
 ## Stack
 
@@ -27,7 +28,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-- Frontend: http://localhost:5173 (shows a live backend-status indicator)
+- Frontend: http://localhost:5173 (the playable game loop — deal, guess, reveal)
 - Backend health: http://localhost:8000/api/health/ → `{"status": "ok", ...}`
 - Django admin: http://localhost:8000/admin/
 
@@ -143,13 +144,18 @@ human baseline. Set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`, default
 the round falls back to pure pioneer mode. Gemini is always faked in tests, with one
 `@external` smoke test that hits the real API and is excluded from CI.
 
-## Component workshop (WP-08 / WP-09)
+## Game loop & component workshop (WP-08 / WP-09 / WP-10)
 
-The round primitives — `WaveSlider` (one-thumb guess + confidence interval),
-`IntervalHandle`, `ScaleHeader`, `ThingCard` — and the `RevealWave` payoff (crowd
-histogram, count-up score, percentile stinger, outcome quips, bimodality + beat-the-bot
-variants) live in Storybook with a story per state: `cd frontend && yarn storybook`.
-They are not wired into the running app yet — that's WP-10.
+The app boots straight into the playable loop (`PlayScreen`): it deals a blind
+round, the player places their guess with the one-thumb `WaveSlider` (drag the dot
+to move, drag the ends to reshape, wheel/vertical-drag to resize), and submitting
+animates the `RevealWave` payoff (crowd histogram, count-up score, percentile
+stinger, outcome quips, bimodality + beat-the-bot variants). The next round is
+preloaded during the reveal, and network failures drop into a retry state.
+
+Every primitive also lives in Storybook with a story per state (idle, narrow, wide,
+asymmetric, disabled, RTL, mobile, each reveal outcome): `cd frontend && yarn storybook`.
+Component and loop behaviour is covered by Vitest, the loop flows against MSW mocks.
 
 ## TDD conventions (project-wide)
 
@@ -178,4 +184,4 @@ docs/       planning document & work packages
 - [x] ruff, eslint, tsc, vitest, pytest, Storybook build all green
 - [x] README quickstart for clean machines (this file)
 
-Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (models & snapshots), **WP-04** (sessions & claiming), **WP-05** (pairing scheduler — 60/30/10 mix, blind deals), **WP-06** (round API: deal → guess → reveal, OpenAPI schema, generated MSW mocks), **WP-07** (Gemini cold-start worker + Celery), **WP-08** (React guess primitives), **WP-09** (`RevealWave` + score panel). Next: **WP-10 (game loop screen)** wires the WP-08/09 components to the round API.
+Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (models & snapshots), **WP-04** (sessions & claiming), **WP-05** (pairing scheduler — 60/30/10 mix, blind deals), **WP-06** (round API: deal → guess → reveal, OpenAPI schema, generated MSW mocks), **WP-07** (Gemini cold-start worker + Celery), **WP-08** (React guess primitives), **WP-09** (`RevealWave` + score panel), **WP-10** (playable game loop screen: preloading, optimistic submit, too-fast toast, error/offline retry). Next: **WP-11 (meta layer — streaks, Daily Wave, stats, content submission)** and **WP-12 (Playwright e2e)**.
