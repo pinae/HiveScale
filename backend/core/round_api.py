@@ -19,6 +19,7 @@ import time as _time
 
 from django.core import signing
 from django.db import transaction
+from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status
@@ -39,6 +40,7 @@ from core.models import Guess, Pairing, RoundScore
 from core.scheduler import NoPairingAvailable, deal, serialize_deal
 from core.services import SPEED_FLOOR_MS, eligible_guesses, recompute_snapshot
 from core.sessions import resolve_player
+from core.streaks import register_play
 from core.tasks import schedule_cold_start
 
 #: Flat reward for answering an ungraduated pairing. Deliberately a touch above
@@ -224,8 +226,9 @@ def submit_guess(request) -> Response:
 
         if counted:
             recompute_snapshot(pairing)
+            register_play(player, timezone.localdate())
 
-    body["streak"] = {"hot": player.hot_streak}
+    body["streak"] = {"hot": player.hot_streak, "daily": player.daily_streak}
     body["player"] = {"xp": player.xp, "level": player.level}
     return Response(body)
 
