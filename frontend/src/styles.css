@@ -157,7 +157,10 @@ body {
   border-radius: 999px;
   background: linear-gradient(90deg, var(--bsg-wave-deep), var(--bsg-wave));
   box-shadow: 0 0 14px color-mix(in srgb, var(--bsg-wave) 55%, transparent);
+  cursor: grab;
 }
+
+.bsg-slider[data-disabled] .bsg-slider-band { cursor: not-allowed; }
 
 .bsg-slider-thumb,
 .bsg-interval-handle {
@@ -195,7 +198,17 @@ body {
 .bsg-slider[data-disabled] .bsg-interval-handle,
 .bsg-interval-handle[data-disabled] { cursor: not-allowed; }
 
-.bsg-slider-track[data-dragging] .bsg-slider-thumb { cursor: grabbing; }
+/* A disabled handle must read as inert, not just refuse the cursor. */
+.bsg-slider[data-disabled] .bsg-slider-thumb { opacity: 0.55; }
+.bsg-slider[data-disabled] .bsg-interval-handle,
+.bsg-interval-handle[data-disabled] {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+  box-shadow: none;
+}
+
+.bsg-slider-track[data-dragging] .bsg-slider-thumb,
+.bsg-slider-track[data-dragging] .bsg-slider-band { cursor: grabbing; }
 
 @media (prefers-reduced-motion: no-preference) {
   .bsg-slider-thumb,
