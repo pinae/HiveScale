@@ -19,8 +19,30 @@ class PlayerAdmin(admin.ModelAdmin):
     search_fields = ("device_token",)
 
 
+class ModerationAdmin(admin.ModelAdmin):
+    """Shared moderation actions for player-submitted content (WP-11)."""
+
+    actions = ("approve_submissions", "reject_submissions")
+
+    @admin.action(description="Approve selected (publish)")
+    def approve_submissions(self, request, queryset):
+        from core.content import approve
+
+        for obj in queryset:
+            approve(obj)
+        self.message_user(request, f"Approved {queryset.count()} item(s).")
+
+    @admin.action(description="Reject selected")
+    def reject_submissions(self, request, queryset):
+        from core.content import reject
+
+        for obj in queryset:
+            reject(obj)
+        self.message_user(request, f"Rejected {queryset.count()} item(s).")
+
+
 @admin.register(Thing)
-class ThingAdmin(admin.ModelAdmin):
+class ThingAdmin(ModerationAdmin):
     list_display = ("text", "slug", "status", "language", "created_by", "created_at")
     list_filter = ("status", "language")
     search_fields = ("text",)
@@ -28,7 +50,7 @@ class ThingAdmin(admin.ModelAdmin):
 
 
 @admin.register(Scale)
-class ScaleAdmin(admin.ModelAdmin):
+class ScaleAdmin(ModerationAdmin):
     list_display = ("left_label", "right_label", "status", "created_by", "created_at")
     list_filter = ("status",)
     search_fields = ("left_label", "right_label")

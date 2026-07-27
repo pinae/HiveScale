@@ -40,3 +40,36 @@ def schedule_cold_start(pairing: Pairing) -> bool:
     except Exception as exc:  # broker down, misconfig — pioneer mode still works
         logger.warning("could not enqueue cold start for pairing %s: %s", pairing.pk, exc)
         return False
+
+
+@shared_task(name="core.sanity_check_thing")
+def sanity_check_thing(thing_id: int) -> str | None:
+    """Vet a submitted Thing with the LLM and update its status (WP-11)."""
+    from core.ai import get_gemini_client
+    from core.content import run_sanity_check
+    from core.models import Thing
+
+    obj = Thing.objects.filter(pk=thing_id).first()
+    return None if obj is None else run_sanity_check(obj, get_gemini_client())
+
+
+@shared_task(name="core.sanity_check_scale")
+def sanity_check_scale(scale_id: int) -> str | None:
+    """Vet a submitted Scale with the LLM and update its status (WP-11)."""
+    from core.ai import get_gemini_client
+    from core.content import run_sanity_check
+    from core.models import Scale
+
+    obj = Scale.objects.filter(pk=scale_id).first()
+    return None if obj is None else run_sanity_check(obj, get_gemini_client())
+
+
+def schedule_sanity_check(kind: str, obj_id: int) -> bool:
+    """Best-effort enqueue of a content sanity check; never breaks the request."""
+    task = sanity_check_thing if kind == "thing" else sanity_check_scale
+    try:
+        task.delay(obj_id)
+        return True
+    except Exception as exc:  # broker down — the item just waits in the queue
+        logger.warning("could not enqueue sanity check for %s %s: %s", kind, obj_id, exc)
+        return False

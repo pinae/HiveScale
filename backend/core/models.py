@@ -14,9 +14,10 @@ from django.db.models import Q
 
 
 class ContentStatus(models.TextChoices):
-    DRAFT = "draft"
+    DRAFT = "draft"  # submitted; awaiting sanity check or human moderation
     ACTIVE = "active"
     RETIRED = "retired"
+    REJECTED = "rejected"  # failed the profanity/PII filter or the sanity check
 
 
 class Player(models.Model):
