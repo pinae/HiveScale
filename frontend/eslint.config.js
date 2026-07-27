@@ -28,6 +28,9 @@ export default [
     rules: {
       ...tsPlugin.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      // TypeScript already resolves identifiers (incl. DOM lib types like
+      // HTMLDivElement); no-undef only produces false positives on TS files.
+      "no-undef": "off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
