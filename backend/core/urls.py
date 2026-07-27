@@ -7,6 +7,7 @@ urlpatterns = [
     path("health/", views.health, name="health"),
     path("session/", views.session, name="session"),
     path("me/", views.me, name="me"),
+    path("me/stats/", views.me_stats, name="me-stats"),
     path("session/claim/request/", views.claim_request, name="claim-request"),
     path("session/claim/confirm/", views.claim_confirm, name="claim-confirm"),
     path("round/next/", round_api.next_round, name="round-next"),

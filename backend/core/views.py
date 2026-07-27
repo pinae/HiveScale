@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from core.archetypes import calibration_summary, classify
 from core.models import Player
 from core.services import claim_player
 from core.sessions import attach_session_cookie, new_device_token, resolve_player
@@ -48,6 +49,28 @@ def me(request) -> Response:
     if player is None:
         return _unauthorized()
     return Response(_profile(player))
+
+
+@api_view(["GET"])
+def me_stats(request) -> Response:
+    """Calibration curve, archetype, and streaks for the stats page (WP-11)."""
+    player = resolve_player(request)
+    if player is None:
+        return _unauthorized()
+    stats = player.calibration_stats or {}
+    return Response(
+        {
+            "archetype": classify(stats),
+            "calibration": calibration_summary(stats),
+            "streaks": {
+                "hot": player.hot_streak,
+                "daily": player.daily_streak,
+                "freezes": player.streak_freezes,
+            },
+            "xp": player.xp,
+            "level": player.level,
+        }
+    )
 
 
 @api_view(["POST"])

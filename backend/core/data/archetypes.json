@@ -1,0 +1,24 @@
+{
+  "min_rounds": 5,
+  "default": {
+    "name": "Newcomer",
+    "blurb": "Play a few rounds and your calibration archetype will emerge."
+  },
+  "rules": [
+    {
+      "name": "Diplomat",
+      "blurb": "Wide and safe — you hedge your intervals to stay covered.",
+      "min_mean_width": 40
+    },
+    {
+      "name": "Oracle",
+      "blurb": "Tight and right — the crowd whisperer.",
+      "max_mean_width": 40,
+      "min_hit_rate": 0.5
+    },
+    {
+      "name": "Maverick",
+      "blurb": "Bold and contrarian — you back your own read of the crowd."
+    }
+  ]
+}
