@@ -140,4 +140,29 @@ describe("PlayScreen", () => {
     await user.click(screen.getByRole("button", { name: /try again/i }));
     expect(await screen.findByRole("heading", { name: "Robotic lawnmower" })).toBeInTheDocument();
   });
+
+  it("opens the stats page and returns to the game", async () => {
+    server.use(
+      sessionOk,
+      http.get("/api/round/next/", () => HttpResponse.json(roundA)),
+      http.get("/api/me/stats/", () =>
+        HttpResponse.json({
+          archetype: { name: "Oracle", blurb: "Tight and right." },
+          calibration: { n: 12, hit_rate: 0.7, mean_width: 22 },
+          streaks: { hot: 3, daily: 5, freezes: 1 },
+          xp: 3200,
+          level: 4,
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<PlayScreen />);
+
+    await screen.findByRole("heading", { name: "Robotic lawnmower" });
+    await user.click(screen.getByRole("button", { name: /^stats$/i }));
+    expect(await screen.findByTestId("archetype-name")).toHaveTextContent("Oracle");
+
+    await user.click(screen.getByRole("button", { name: /back to the game/i }));
+    expect(await screen.findByRole("heading", { name: "Robotic lawnmower" })).toBeInTheDocument();
+  });
 });

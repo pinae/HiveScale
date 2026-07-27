@@ -8,9 +8,11 @@ export interface SessionHeaderProps {
   xp: number;
   level: number;
   streak: number;
+  /** When provided, renders a button that opens the stats page. */
+  onShowStats?: () => void;
 }
 
-export default function SessionHeader({ xp, level, streak }: SessionHeaderProps) {
+export default function SessionHeader({ xp, level, streak, onShowStats }: SessionHeaderProps) {
   return (
     <header className="bsg-session-header">
       <div className="bsg-session-brand">
@@ -33,6 +35,11 @@ export default function SessionHeader({ xp, level, streak }: SessionHeaderProps)
           </div>
         ) : null}
       </dl>
+      {onShowStats ? (
+        <button type="button" className="bsg-btn bsg-session-statsbtn" onClick={onShowStats}>
+          Stats
+        </button>
+      ) : null}
     </header>
   );
 }

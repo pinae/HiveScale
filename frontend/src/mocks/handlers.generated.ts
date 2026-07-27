@@ -3,9 +3,15 @@
 import { http, HttpResponse } from "msw";
 
 export const handlers = [
+  http.post("/api/content/scales/", () =>
+    HttpResponse.json({})),
+  http.post("/api/content/things/", () =>
+    HttpResponse.json({})),
   http.get("/api/health/", () =>
     HttpResponse.json({})),
   http.get("/api/me/", () =>
+    HttpResponse.json({})),
+  http.get("/api/me/stats/", () =>
     HttpResponse.json({})),
   http.post("/api/round/guess/", () =>
     HttpResponse.json({

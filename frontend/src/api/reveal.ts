@@ -39,7 +39,7 @@ export interface HumanReveal {
   crowd: CrowdStats;
   percentile: number;
   bimodal: boolean;
-  streak: { hot: number };
+  streak: { hot: number; daily?: number };
   player: PlayerState;
 }
 
@@ -48,7 +48,7 @@ export interface PioneerReveal {
   counted: boolean;
   pioneer_bonus: number;
   ai_estimate: AiEstimate | null;
-  streak: { hot: number };
+  streak: { hot: number; daily?: number };
   player: PlayerState;
 }
 

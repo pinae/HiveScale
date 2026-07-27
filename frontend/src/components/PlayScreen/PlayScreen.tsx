@@ -3,11 +3,15 @@
  * score header, optimistic submit, a too-fast toast, and error/offline retry.
  * Next rounds are preloaded during the reveal so advancing is instant.
  */
+import { useState } from "react";
+
 import RevealWave from "../RevealWave";
 import ScaleHeader from "../ScaleHeader";
 import SessionHeader from "../SessionHeader";
+import StatsPanel from "../StatsPanel";
 import ThingCard from "../ThingCard";
 import WaveSlider from "../WaveSlider";
+import { type Stats, fetchStats } from "../../api/client";
 import { useGameLoop } from "../../game/useGameLoop";
 
 export interface PlayScreenProps {
@@ -18,9 +22,53 @@ export default function PlayScreen({ className }: PlayScreenProps) {
   const loop = useGameLoop();
   const { phase, round, reveal, submittedGuess, profile, streak } = loop;
 
+  const [showStats, setShowStats] = useState(false);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [statsError, setStatsError] = useState(false);
+
+  async function openStats() {
+    setShowStats(true);
+    setStats(null);
+    setStatsError(false);
+    try {
+      setStats(await fetchStats());
+    } catch {
+      setStatsError(true);
+    }
+  }
+
+  if (showStats) {
+    return (
+      <div className={`bsg-play${className ? ` ${className}` : ""}`}>
+        <SessionHeader xp={profile.xp} level={profile.level} streak={streak} />
+        <main className="bsg-play-body">
+          {stats ? (
+            <StatsPanel stats={stats} />
+          ) : statsError ? (
+            <p className="bsg-play-error" role="alert">
+              Couldn&apos;t load your stats.
+            </p>
+          ) : (
+            <p className="bsg-play-loading" role="status">
+              Loading your stats…
+            </p>
+          )}
+          <button type="button" className="bsg-btn" onClick={() => setShowStats(false)}>
+            Back to the game
+          </button>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className={`bsg-play${className ? ` ${className}` : ""}`}>
-      <SessionHeader xp={profile.xp} level={profile.level} streak={streak} />
+      <SessionHeader
+        xp={profile.xp}
+        level={profile.level}
+        streak={streak}
+        onShowStats={openStats}
+      />
 
       <main className="bsg-play-body">
         {phase === "error" ? (

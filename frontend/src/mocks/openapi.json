@@ -6,6 +6,38 @@
         "description": "Crowd-calibration guessing game — deal, guess, reveal."
     },
     "paths": {
+        "/api/content/scales/": {
+            "post": {
+                "operationId": "content_scales_create",
+                "tags": [
+                    "content"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/content/things/": {
+            "post": {
+                "operationId": "content_things_create",
+                "tags": [
+                    "content"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/health/": {
             "get": {
                 "operationId": "health_retrieve",
@@ -14,12 +46,6 @@
                     "health"
                 ],
                 "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    },
                     {}
                 ],
                 "responses": {
@@ -36,12 +62,23 @@
                     "me"
                 ],
                 "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/me/stats/": {
+            "get": {
+                "operationId": "me_stats_retrieve",
+                "description": "Calibration curve, archetype, and streaks for the stats page (WP-11).",
+                "tags": [
+                    "me"
+                ],
+                "security": [
                     {}
                 ],
                 "responses": {
@@ -81,12 +118,6 @@
                     }
                 },
                 "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    },
                     {}
                 ],
                 "responses": {
@@ -207,12 +238,6 @@
                     "round"
                 ],
                 "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    },
                     {}
                 ],
                 "responses": {
@@ -254,12 +279,6 @@
                     "session"
                 ],
                 "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    },
                     {}
                 ],
                 "responses": {
@@ -277,12 +296,6 @@
                     "session"
                 ],
                 "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    },
                     {}
                 ],
                 "responses": {
@@ -300,12 +313,6 @@
                     "session"
                 ],
                 "security": [
-                    {
-                        "cookieAuth": []
-                    },
-                    {
-                        "basicAuth": []
-                    },
                     {}
                 ],
                 "responses": {
@@ -316,17 +323,5 @@
             }
         }
     },
-    "components": {
-        "securitySchemes": {
-            "basicAuth": {
-                "type": "http",
-                "scheme": "basic"
-            },
-            "cookieAuth": {
-                "type": "apiKey",
-                "in": "cookie",
-                "name": "sessionid"
-            }
-        }
-    }
+    "components": {}
 }

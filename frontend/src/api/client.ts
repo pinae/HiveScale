@@ -18,6 +18,14 @@ export interface Profile {
   is_claimed: boolean;
 }
 
+export interface Stats {
+  archetype: { name: string; blurb: string };
+  calibration: { n: number; hit_rate: number; mean_width: number };
+  streaks: { hot: number; daily: number; freezes: number };
+  xp: number;
+  level: number;
+}
+
 export interface GuessInput {
   round_token: string;
   center: number;
@@ -43,6 +51,10 @@ export async function startSession(): Promise<{ player: Profile; created: boolea
 
 export async function fetchNextRound(): Promise<Round> {
   return readJson(await fetch("/api/round/next/"));
+}
+
+export async function fetchStats(): Promise<Stats> {
+  return readJson(await fetch("/api/me/stats/"));
 }
 
 export async function submitGuess(input: GuessInput): Promise<RevealPayload> {
