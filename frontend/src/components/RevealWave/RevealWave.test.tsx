@@ -6,8 +6,8 @@
  * an outcome quip, a bimodality celebration, the optional "beat the bot"
  * overlay, the pioneer variant, and a reduced-motion path.
  */
-import { render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import RevealWave from "./RevealWave";
 import type { HumanReveal, PioneerReveal } from "../../api/reveal";
@@ -95,6 +95,32 @@ describe("RevealWave (human)", () => {
       "data-animated",
       "false",
     );
+  });
+
+  // Regression: the animated path (data-animated="true" + the score counting up
+  // from 0 to the target) had no coverage — every other test disables motion, so
+  // a broken gate, a stuck count-up, or a lost data-animated attribute (which
+  // drives the CSS bar-rise) would all slip through. Fake timers drive the
+  // rAF-based count-up deterministically.
+  it("animates when motion is allowed: gate on, score counts up to the target", () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
+    try {
+      mockReducedMotion(false);
+      render(<RevealWave reveal={humanReveal} guess={guess} />); // animate defaults on
+
+      const score = () => screen.getByTestId("reveal-score-total").textContent;
+      expect(screen.getByRole("region", { name: /reveal/i })).toHaveAttribute(
+        "data-animated",
+        "true", // drives the CSS bar-rise
+      );
+      expect(score()).toBe("0"); // starts below the target (not an instant jump)
+      act(() => {
+        vi.advanceTimersByTime(1000); // run the ~750ms count-up to completion
+      });
+      expect(score()).toBe("853"); // reaches the target — not stuck partway
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
