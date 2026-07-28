@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 db.sqlite3
+e2e-db.sqlite3*
 staticfiles/
 .venv/
 .env

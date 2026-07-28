@@ -59,4 +59,41 @@ jobs:
         run: yarn test
       - name: Storybook build (component workshop must stay green)
         run: yarn build-storybook --quiet
-      # WP-12 adds: storybook test-runner + Playwright e2e against docker compose.
+
+  e2e:
+    # WP-12: Playwright drives the real SPA in Chromium. The mocked UI suite and
+    # the real-backend suite (isolated sqlite, Gemini faked, no Redis) both run;
+    # Playwright boots both web servers itself.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Enable Corepack (activates the pinned Yarn 4)
+        run: corepack enable
+      - name: Install uv (for the backend web server)
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Sync backend dependencies (frozen to uv.lock)
+        working-directory: backend
+        run: uv sync --frozen
+      - name: Install frontend deps (immutable)
+        working-directory: frontend
+        run: yarn install --immutable
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: yarn playwright install --with-deps chromium
+      - name: End-to-end tests
+        working-directory: frontend
+        run: yarn e2e
+      - name: Upload Playwright report & traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7

@@ -57,15 +57,21 @@ yarn tsc -b                    # typecheck
 yarn dev                       # http://localhost:5173 (proxies /api to :8000)
 yarn storybook                 # component workshop on :6006
 yarn playwright install chromium   # once, unless your env pre-installs it
-yarn e2e                       # Playwright: full-browser game loop (mocks the API)
+yarn e2e                       # Playwright end-to-end suites (WP-12)
 ```
 
-> The e2e tests run the real SPA in Chromium and mock the backend at the network
-> layer (`e2e/mocks.ts`), so they need no Django/Postgres/Redis. Playwright is
-> pinned to the version whose bundled Chromium matches the container's
-> pre-installed browser; on other machines run `yarn playwright install chromium`
-> once. If `playwright install` has no build for your OS (e.g. Ubuntu 26.04),
-> point it at a system Chromium instead:
+> **e2e (WP-12).** Two Playwright suites share one browser (`yarn e2e` runs both):
+> `e2e/ui/` mocks the API at the network layer for fast UI mechanics (pointer
+> drags, the reveal animation, reduced-motion); `e2e/stack/` runs the **real**
+> Django backend — an isolated sqlite DB it reseeds on start, Gemini faked, no
+> Redis — to prove the blind-deal guarantee, XP accumulation, the server-side
+> speed floor, keyboard-only play, and the stats page. Both web servers start
+> automatically; the stack suite needs `uv` (backend) on `PATH`.
+>
+> Playwright is pinned to the version whose bundled Chromium matches the
+> container's pre-installed browser; on other machines run `yarn playwright
+> install chromium` once. If `playwright install` has no build for your OS (e.g.
+> Ubuntu 26.04), point it at a system Chromium instead:
 > `PLAYWRIGHT_CHROMIUM_PATH=$(which chromium) yarn e2e`.
 
 > Peer-dependency note: Storybook 8.6 ships a few transitive packages with missing
@@ -195,9 +201,9 @@ docs/       planning document & work packages
 - [x] ruff, eslint, tsc, vitest, pytest, Storybook build all green
 - [x] README quickstart for clean machines (this file)
 
-Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (models & snapshots), **WP-04** (sessions & claiming), **WP-05** (pairing scheduler — 60/30/10 mix, blind deals), **WP-06** (round API: deal → guess → reveal, OpenAPI schema, generated MSW mocks), **WP-07** (Gemini cold-start worker + Celery), **WP-08** (React guess primitives), **WP-09** (`RevealWave` + score panel), **WP-10** (playable game loop screen: preloading, optimistic submit, too-fast toast, error/offline retry), **WP-11** (meta layer: daily streaks + freezes, `generate_daily_wave` command + emoji share string, `/api/me/stats/` archetypes from a config file, level-gated content submission with an LLM sanity check + admin moderation queue, and a stats page). **WP-12 (Playwright e2e)** is under way: a full-browser game-loop
-suite (`frontend/e2e/`) covering real pointer drags and the CSS reveal animation,
-with the API mocked at the network layer. Next: finish **WP-12** (wire it into CI) and
-**WP-13 (research export)**.
+Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP-03** (models & snapshots), **WP-04** (sessions & claiming), **WP-05** (pairing scheduler — 60/30/10 mix, blind deals), **WP-06** (round API: deal → guess → reveal, OpenAPI schema, generated MSW mocks), **WP-07** (Gemini cold-start worker + Celery), **WP-08** (React guess primitives), **WP-09** (`RevealWave` + score panel), **WP-10** (playable game loop screen: preloading, optimistic submit, too-fast toast, error/offline retry), **WP-11** (meta layer: daily streaks + freezes, `generate_daily_wave` command + emoji share string, `/api/me/stats/` archetypes from a config file, level-gated content submission with an LLM sanity check + admin moderation queue, and a stats page), **WP-12** (Playwright e2e: a mocked-API UI suite for pointer
+drags + the reveal animation, and a real-backend integration suite proving the
+blind-deal guarantee, XP accumulation, the server-side speed floor, keyboard-only
+play, and the stats page). Next: wire e2e into CI and **WP-13 (research export)**.
 
-Partial in WP-11 (APIs/services + tests done; wider UI/endpoints still to come): the Daily Wave has a generator + share string but not yet the `/api/daily-wave/` play endpoints; content submission has the gated API + moderation queue but not yet an in-app submission form.
+Partial in WP-11 (APIs/services + tests done; wider UI/endpoints still to come): the Daily Wave has a generator + share string but not yet the `/api/daily-wave/` play endpoints; content submission has the gated API + moderation queue but not yet an in-app submission form. Two WP-12 scenarios wait on this UI — account-claim-after-reveal and Daily-Wave share-to-clipboard — and land once the endpoints/forms exist.
