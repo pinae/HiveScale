@@ -2,9 +2,14 @@
  * The game loop screen (WP-10): deal → guess → reveal → next, with a persistent
  * score header, optimistic submit, a too-fast toast, and error/offline retry.
  * Next rounds are preloaded during the reveal so advancing is instant.
+ *
+ * It also hosts the two out-of-loop pages reached from the header — the stats
+ * page (WP-11) and the account-claim panel (WP-11/§2.6) — and confirms a claim
+ * magic link if the app was opened from one.
  */
 import { useState } from "react";
 
+import ClaimPanel from "../ClaimPanel";
 import RevealWave from "../RevealWave";
 import ScaleHeader from "../ScaleHeader";
 import SessionHeader from "../SessionHeader";
@@ -13,6 +18,7 @@ import ThingCard from "../ThingCard";
 import WaveSlider from "../WaveSlider";
 import { type Stats, fetchStats } from "../../api/client";
 import { useGameLoop } from "../../game/useGameLoop";
+import { useMagicLinkClaim } from "../../game/useMagicLinkClaim";
 
 export interface PlayScreenProps {
   className?: string;
@@ -25,6 +31,11 @@ export default function PlayScreen({ className }: PlayScreenProps) {
   const [showStats, setShowStats] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [statsError, setStatsError] = useState(false);
+  const [showClaim, setShowClaim] = useState(false);
+
+  // A claim magic link (?claim=…) confirms itself on load and folds in the
+  // resulting profile; its notice is surfaced above the game.
+  const claimNotice = useMagicLinkClaim((result) => loop.markClaimed(result.player));
 
   async function openStats() {
     setShowStats(true);
@@ -37,10 +48,29 @@ export default function PlayScreen({ className }: PlayScreenProps) {
     }
   }
 
+  const rootClass = `bsg-play${className ? ` ${className}` : ""}`;
+
+  if (showClaim) {
+    return (
+      <div className={rootClass}>
+        <SessionHeader xp={profile.xp} level={profile.level} streak={streak} isClaimed={loop.isClaimed} />
+        <main className="bsg-play-body">
+          <ClaimPanel
+            onClaimed={(result) => {
+              loop.markClaimed(result.player);
+              setShowClaim(false);
+            }}
+            onCancel={() => setShowClaim(false)}
+          />
+        </main>
+      </div>
+    );
+  }
+
   if (showStats) {
     return (
-      <div className={`bsg-play${className ? ` ${className}` : ""}`}>
-        <SessionHeader xp={profile.xp} level={profile.level} streak={streak} />
+      <div className={rootClass}>
+        <SessionHeader xp={profile.xp} level={profile.level} streak={streak} isClaimed={loop.isClaimed} />
         <main className="bsg-play-body">
           {stats ? (
             <StatsPanel stats={stats} />
@@ -62,15 +92,22 @@ export default function PlayScreen({ className }: PlayScreenProps) {
   }
 
   return (
-    <div className={`bsg-play${className ? ` ${className}` : ""}`}>
+    <div className={rootClass}>
       <SessionHeader
         xp={profile.xp}
         level={profile.level}
         streak={streak}
         onShowStats={openStats}
+        onClaim={() => setShowClaim(true)}
+        isClaimed={loop.isClaimed}
       />
 
       <main className="bsg-play-body">
+        {claimNotice ? (
+          <p className="bsg-toast" role="status">
+            {claimNotice}
+          </p>
+        ) : null}
         {phase === "error" ? (
           <div className="bsg-play-error" role="alert">
             <p>{loop.error}</p>

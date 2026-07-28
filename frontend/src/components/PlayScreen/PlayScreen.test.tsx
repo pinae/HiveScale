@@ -141,6 +141,32 @@ describe("PlayScreen", () => {
     expect(await screen.findByRole("heading", { name: "Robotic lawnmower" })).toBeInTheDocument();
   });
 
+  it("saves progress: the claim panel requests a link, confirms, and marks the session saved", async () => {
+    server.use(
+      sessionOk,
+      http.get("/api/round/next/", () => HttpResponse.json(roundA)),
+      http.post("/api/session/claim/request/", () =>
+        HttpResponse.json({ detail: "Claim link issued.", claim_token: "tok" }),
+      ),
+      http.post("/api/session/claim/confirm/", () =>
+        HttpResponse.json({ player: { level: 2, xp: 999, is_claimed: true }, merged: false }),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<PlayScreen />);
+    await screen.findByRole("button", { name: /lock it in/i });
+
+    await user.click(screen.getByRole("button", { name: /save progress/i }));
+    await user.type(screen.getByLabelText(/email/i), "me@example.com");
+    await user.click(screen.getByRole("button", { name: /magic link/i }));
+    await user.click(await screen.findByRole("button", { name: /confirm now/i }));
+
+    // Back in the game, the session now shows as saved with the merged profile.
+    await screen.findByRole("button", { name: /lock it in/i });
+    expect(screen.getByTestId("session-saved")).toBeInTheDocument();
+    expect(screen.getByTestId("session-xp")).toHaveTextContent("999");
+  });
+
   it("opens the stats page and returns to the game", async () => {
     server.use(
       sessionOk,

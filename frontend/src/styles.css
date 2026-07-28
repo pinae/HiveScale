@@ -375,7 +375,37 @@ body {
 
 /* --- StatsPanel (WP-11) ------------------------------------------------- */
 
-.bsg-session-statsbtn { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+.bsg-session-actions { display: flex; align-items: center; gap: 0.5rem; }
+.bsg-session-statsbtn,
+.bsg-session-claimbtn { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+.bsg-session-saved {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--bsg-wave);
+  white-space: nowrap;
+}
+
+/* --- ClaimPanel (WP-11 · save your progress) --------------------------- */
+
+.bsg-claim { display: flex; flex-direction: column; gap: 0.9rem; }
+.bsg-claim-title { margin: 0; font-size: 1.2rem; }
+.bsg-claim-blurb { margin: 0; color: var(--bsg-ink-dim); font-size: 0.9rem; }
+.bsg-claim-field { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.85rem; }
+.bsg-claim-field span { color: var(--bsg-ink-dim); text-transform: uppercase; font-size: 0.65rem; }
+.bsg-claim-field input {
+  font: inherit;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--bsg-radius);
+  border: 1px solid color-mix(in srgb, var(--bsg-wave) 40%, transparent);
+  background: var(--bsg-bg-raised);
+  color: var(--bsg-ink);
+}
+.bsg-claim-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.bsg-claim-dev { display: flex; flex-direction: column; gap: 0.5rem; }
+.bsg-claim-devnote { margin: 0; color: var(--bsg-ink-dim); font-size: 0.8rem; }
+.bsg-claim-sent,
+.bsg-claim-done { margin: 0; font-weight: 700; }
+.bsg-claim-error { margin: 0; color: var(--bsg-accent); font-weight: 700; }
 
 .bsg-stats {
   display: flex;

@@ -41,12 +41,49 @@ export class ApiError extends Error {
 }
 
 async function readJson<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new ApiError(res.status);
+  if (!res.ok) {
+    let detail: string | undefined;
+    try {
+      detail = ((await res.json()) as { detail?: string })?.detail;
+    } catch {
+      /* non-JSON error body — fall back to the status-only message */
+    }
+    throw new ApiError(res.status, detail);
+  }
   return (await res.json()) as T;
 }
 
+const jsonPost = (url: string, body: unknown): Promise<Response> =>
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
 export async function startSession(): Promise<{ player: Profile; created: boolean }> {
   return readJson(await fetch("/api/session/", { method: "POST" }));
+}
+
+export interface ClaimRequestResult {
+  detail: string;
+  /** Present only in dev/test ("echo" delivery); prod emails the link instead. */
+  claim_token?: string;
+}
+
+export interface ClaimConfirmResult {
+  player: Profile;
+  /** True when the email already had an account and the two were merged. */
+  merged: boolean;
+}
+
+/** Start an account claim: ask the backend to issue a magic link for `email`. */
+export async function requestClaim(email: string): Promise<ClaimRequestResult> {
+  return readJson(await jsonPost("/api/session/claim/request/", { email }));
+}
+
+/** Finish a claim: exchange a magic-link token for the (possibly merged) profile. */
+export async function confirmClaim(claimToken: string): Promise<ClaimConfirmResult> {
+  return readJson(await jsonPost("/api/session/claim/confirm/", { claim_token: claimToken }));
 }
 
 export async function fetchNextRound(): Promise<Round> {

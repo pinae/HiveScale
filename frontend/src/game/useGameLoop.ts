@@ -8,7 +8,13 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { type Round, fetchNextRound, startSession, submitGuess } from "../api/client";
+import {
+  type Profile,
+  type Round,
+  fetchNextRound,
+  startSession,
+  submitGuess,
+} from "../api/client";
 import type { RevealPayload } from "../api/reveal";
 import type { GuessValue } from "../components/WaveSlider";
 
@@ -27,10 +33,13 @@ export interface GameLoop {
   submittedGuess: GuessValue | null;
   profile: { xp: number; level: number };
   streak: number;
+  isClaimed: boolean;
   error: string | null;
   submit: () => void;
   next: () => void;
   retry: () => void;
+  /** Fold in the profile returned by a successful account claim (WP-11/12). */
+  markClaimed: (profile: Profile) => void;
 }
 
 export function useGameLoop(): GameLoop {
@@ -41,6 +50,7 @@ export function useGameLoop(): GameLoop {
   const [submittedGuess, setSubmittedGuess] = useState<GuessValue | null>(null);
   const [profile, setProfile] = useState({ xp: 0, level: 1 });
   const [streak, setStreak] = useState(0);
+  const [isClaimed, setIsClaimed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const guessRef = useRef(guess);
@@ -70,12 +80,20 @@ export function useGameLoop(): GameLoop {
   // Starts at the initial "booting" phase; retry() re-enters it explicitly.
   const boot = useCallback(async () => {
     try {
-      await startSession();
+      const { player } = await startSession();
+      // A returning (claimed) player arrives with real xp/level and a claim flag.
+      setProfile({ xp: player.xp, level: player.level });
+      setIsClaimed(player.is_claimed);
       applyRound(await fetchNextRound());
     } catch {
       fail("boot", "Couldn't reach the game. Check your connection.");
     }
   }, [applyRound, fail]);
+
+  const markClaimed = useCallback((player: Profile) => {
+    setProfile({ xp: player.xp, level: player.level });
+    setIsClaimed(player.is_claimed);
+  }, []);
 
   const submit = useCallback(async () => {
     const current = roundRef.current;
@@ -151,9 +169,11 @@ export function useGameLoop(): GameLoop {
     submittedGuess,
     profile,
     streak,
+    isClaimed,
     error,
     submit,
     next,
     retry,
+    markClaimed,
   };
 }

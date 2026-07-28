@@ -2,7 +2,8 @@
  * WP-10: SessionHeader — brand + running score, with the streak flame gated.
  */
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import SessionHeader from "./SessionHeader";
 
@@ -19,5 +20,19 @@ describe("SessionHeader", () => {
     expect(screen.queryByLabelText(/hot streak/i)).not.toBeInTheDocument();
     rerender(<SessionHeader xp={0} level={1} streak={4} />);
     expect(screen.getByLabelText(/hot streak: 4/i)).toBeInTheDocument();
+  });
+
+  it("offers to save progress when unclaimed, and confirms once claimed", async () => {
+    const onClaim = vi.fn();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <SessionHeader xp={0} level={1} streak={0} onClaim={onClaim} isClaimed={false} />,
+    );
+    await user.click(screen.getByRole("button", { name: /save progress/i }));
+    expect(onClaim).toHaveBeenCalledOnce();
+
+    rerender(<SessionHeader xp={0} level={1} streak={0} onClaim={onClaim} isClaimed />);
+    expect(screen.queryByRole("button", { name: /save progress/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId("session-saved")).toBeInTheDocument();
   });
 });

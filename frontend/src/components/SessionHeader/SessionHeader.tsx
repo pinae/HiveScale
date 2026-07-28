@@ -10,9 +10,20 @@ export interface SessionHeaderProps {
   streak: number;
   /** When provided, renders a button that opens the stats page. */
   onShowStats?: () => void;
+  /** When provided and the session isn't claimed, offers to save progress. */
+  onClaim?: () => void;
+  /** Whether the session is already tied to an account (WP-11). */
+  isClaimed?: boolean;
 }
 
-export default function SessionHeader({ xp, level, streak, onShowStats }: SessionHeaderProps) {
+export default function SessionHeader({
+  xp,
+  level,
+  streak,
+  onShowStats,
+  onClaim,
+  isClaimed = false,
+}: SessionHeaderProps) {
   return (
     <header className="bsg-session-header">
       <div className="bsg-session-brand">
@@ -35,11 +46,22 @@ export default function SessionHeader({ xp, level, streak, onShowStats }: Sessio
           </div>
         ) : null}
       </dl>
-      {onShowStats ? (
-        <button type="button" className="bsg-btn bsg-session-statsbtn" onClick={onShowStats}>
-          Stats
-        </button>
-      ) : null}
+      <div className="bsg-session-actions">
+        {isClaimed ? (
+          <span className="bsg-session-saved" data-testid="session-saved">
+            ✓ Saved
+          </span>
+        ) : onClaim ? (
+          <button type="button" className="bsg-btn bsg-session-claimbtn" onClick={onClaim}>
+            Save progress
+          </button>
+        ) : null}
+        {onShowStats ? (
+          <button type="button" className="bsg-btn bsg-session-statsbtn" onClick={onShowStats}>
+            Stats
+          </button>
+        ) : null}
+      </div>
     </header>
   );
 }

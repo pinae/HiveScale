@@ -96,6 +96,24 @@ test.describe("real backend game loop", () => {
     await expect(page.getByRole("region", { name: /reveal/i })).toBeVisible();
   });
 
+  test("saving progress after a reveal preserves the accumulated score", async ({ page }) => {
+    await page.goto("/");
+    await playCountedRound(page);
+    const earned = await sessionXp(page);
+    expect(earned).toBeGreaterThan(0);
+
+    // Claim the anonymous session by email (dev "echo" delivery returns the
+    // token inline, so we can confirm without a real inbox).
+    await page.getByRole("button", { name: /save progress/i }).click();
+    await page.getByLabel(/email/i).fill(`e2e-${Date.now()}@example.com`);
+    await page.getByRole("button", { name: /magic link/i }).click();
+    await page.getByRole("button", { name: /confirm now/i }).click();
+
+    // The session is now saved and the score carried across the claim intact.
+    await expect(page.getByTestId("session-saved")).toBeVisible();
+    expect(await sessionXp(page)).toBe(earned);
+  });
+
   test("the stats page shows a real archetype and returns to the game", async ({ page }) => {
     await page.goto("/");
     await waitForRound(page);
