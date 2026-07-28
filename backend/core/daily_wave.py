@@ -61,4 +61,4 @@ def share_string(day: datetime.date, scores: list[float], daily_streak: int = 0)
     footer = f"{total} pts"
     if daily_streak:
         footer += f" · 🔥{daily_streak}"
-    return f"Baseline Guesser {day.isoformat()}\n{row}\n{footer}"
+    return f"HiveScale {day.isoformat()}\n{row}\n{footer}"

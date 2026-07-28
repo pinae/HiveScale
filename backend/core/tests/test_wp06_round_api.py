@@ -1,6 +1,6 @@
 """WP-06 red tests: the round API (deal -> guess -> score -> reveal).
 
-Executable spec (docs/baseline-guesser-plan.md, WP-06 + §1.4/§1.5/§1.7):
+Executable spec (docs/hivescale-plan.md, WP-06 + §1.4/§1.5/§1.7):
 - ``GET /api/round/next/`` deals a *blind* round bound to a signed round token;
 - ``POST /api/round/guess/`` scores the guess and returns the reveal payload
   (crowd histogram, score breakdown, percentile, streak) or the pioneer payload;

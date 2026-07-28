@@ -1,4 +1,4 @@
-"""Django settings for Societal Wavelength.
+"""Django settings for HiveScale.
 
 Everything deployment-specific comes from environment variables so the same
 settings module works for local dev (docker-compose), CI, and production.
@@ -112,7 +112,7 @@ REST_FRAMEWORK = {
 # Contract-first API (plan §4.1): the OpenAPI schema published at /api/schema/
 # is the single source of truth the frontend MSW mocks are generated from.
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Baseline Guesser API",
+    "TITLE": "HiveScale API",
     "DESCRIPTION": "Crowd-calibration guessing game — deal, guess, reveal.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,

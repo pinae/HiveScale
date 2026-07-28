@@ -12,15 +12,15 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: wavelength
-          POSTGRES_USER: wavelength
-          POSTGRES_PASSWORD: wavelength-ci
+          POSTGRES_DB: hivescale
+          POSTGRES_USER: hivescale
+          POSTGRES_PASSWORD: hivescale-ci
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U wavelength"
+          --health-cmd "pg_isready -U hivescale"
           --health-interval 5s --health-timeout 3s --health-retries 10
     env:
-      DATABASE_URL: postgres://wavelength:wavelength-ci@localhost:5432/wavelength
+      DATABASE_URL: postgres://hivescale:hivescale-ci@localhost:5432/hivescale
     defaults:
       run:
         working-directory: backend

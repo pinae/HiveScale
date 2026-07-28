@@ -1,6 +1,6 @@
 """WP-04 red tests: anonymous sessions & players.
 
-Executable spec (docs/baseline-guesser-plan.md, WP-04):
+Executable spec (docs/hivescale-plan.md, WP-04):
 - new device -> new player; same token -> same player
 - tokens are signed and httpOnly-cookie based; the raw token never appears in
   a response body

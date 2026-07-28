@@ -1,6 +1,6 @@
 """WP-03 red tests: domain models, snapshot recomputation, demo seed.
 
-Executable spec (docs/baseline-guesser-plan.md, WP-03):
+Executable spec (docs/hivescale-plan.md, WP-03):
 - snapshot median/quartiles on a 50-guess fixture match a numpy reference
 - flagged, too-fast, and zero-weight guesses are excluded from the baseline
 - ``Guess`` rows are immutable (saving an existing row raises)

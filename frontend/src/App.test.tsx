@@ -26,7 +26,7 @@ describe("App", () => {
     );
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: /baseline guesser/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /hivescale/i })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Robotic lawnmower" })).toBeInTheDocument();
   });
 });

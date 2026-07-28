@@ -67,4 +67,4 @@ def test_grade_emoji_thresholds():
 
 def test_share_string_snapshot():
     result = share_string(DAY, [920.0, 640.0, 300.0, 50.0], daily_streak=3)
-    assert result == "Baseline Guesser 2026-01-01\n🎯🌊🌫️🥶\n1910 pts · 🔥3"
+    assert result == "HiveScale 2026-01-01\n🎯🌊🌫️🥶\n1910 pts · 🔥3"

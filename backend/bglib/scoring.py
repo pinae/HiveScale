@@ -1,4 +1,4 @@
-"""Pure scoring library for Baseline Guesser (WP-02).
+"""Pure scoring library for HiveScale (WP-02).
 
 Zero Django imports — usable from API views, Celery workers, and analysis
 notebooks alike. All functions are deterministic and side-effect free.

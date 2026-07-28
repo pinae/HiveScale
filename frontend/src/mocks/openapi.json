@@ -1,7 +1,7 @@
 {
     "openapi": "3.0.3",
     "info": {
-        "title": "Baseline Guesser API",
+        "title": "HiveScale API",
         "version": "0.1.0",
         "description": "Crowd-calibration guessing game — deal, guess, reveal."
     },

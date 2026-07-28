@@ -1,4 +1,4 @@
-# Baseline Guesser — Planning Document
+# HiveScale — Planning Document
 
 *A crowd-calibration guessing game that doubles as an alignment-dataset factory.*
 

@@ -2,13 +2,13 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-baseline_guesser}
-      POSTGRES_USER: ${POSTGRES_USER:-baseline_guesser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-baseline-guesser-dev}
+      POSTGRES_DB: ${POSTGRES_DB:-hivescale}
+      POSTGRES_USER: ${POSTGRES_USER:-hivescale}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hivescale-dev}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-baseline_guesser}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hivescale}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -25,7 +25,7 @@ services:
     build: ./backend
     command: sh -c "uv run python manage.py migrate && uv run python manage.py runserver 0.0.0.0:8000"
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-baseline_guesser}:${POSTGRES_PASSWORD:-baseline-guesser-dev}@db:5432/${POSTGRES_DB:-baseline_guesser}
+      DATABASE_URL: postgres://${POSTGRES_USER:-hivescale}:${POSTGRES_PASSWORD:-hivescale-dev}@db:5432/${POSTGRES_DB:-hivescale}
       REDIS_URL: redis://redis:6379/0
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-only-insecure-key}
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend

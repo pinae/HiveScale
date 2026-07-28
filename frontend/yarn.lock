@@ -2301,41 +2301,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"baseline-guesser-frontend@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "baseline-guesser-frontend@workspace:."
-  dependencies:
-    "@eslint/js": "npm:^10.0.1"
-    "@storybook/addon-essentials": "npm:^8.6.18"
-    "@storybook/addon-interactions": "npm:^8.6.18"
-    "@storybook/react": "npm:^8.6.18"
-    "@storybook/react-vite": "npm:^8.6.18"
-    "@storybook/test": "npm:^8.6.18"
-    "@testing-library/dom": "npm:^10.4.1"
-    "@testing-library/jest-dom": "npm:^6.4.8"
-    "@testing-library/react": "npm:^16.0.0"
-    "@testing-library/user-event": "npm:^14.5.2"
-    "@types/react": "npm:^19.2.17"
-    "@types/react-dom": "npm:^19.2.3"
-    "@typescript-eslint/eslint-plugin": "npm:^8.8.0"
-    "@typescript-eslint/parser": "npm:^8.8.0"
-    "@vitejs/plugin-react": "npm:^4.0.0"
-    eslint: "npm:^10.7.0"
-    eslint-plugin-react-hooks: "npm:^7.1.1"
-    eslint-plugin-storybook: "npm:^0.12.0"
-    glob: "npm:^13.0.6"
-    jsdom: "npm:^29.1.1"
-    msw: "npm:^2.15.0"
-    react: "npm:^19"
-    react-dom: "npm:^19"
-    storybook: "npm:^8.6.18"
-    typescript: "npm:~6.0.0"
-    uuid: "npm:^14.0.1"
-    vite: "npm:^6.0.0"
-    vitest: "npm:^4.1.10"
-  languageName: unknown
-  linkType: soft
-
 "better-opn@npm:^3.0.2":
   version: 3.0.2
   resolution: "better-opn@npm:3.0.2"
@@ -3361,6 +3326,41 @@ __metadata:
   checksum: 10c0/3abaa4c6f1bcc25273f267297a89a4904963ea29af19b8e4f6eabe04f1c2c7e9abd7bfc4730ddb1d58f2ea04b6fee74053d8bddb5656ec6ebf6c79cc8d14202c
   languageName: node
   linkType: hard
+
+"hivescale-frontend@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "hivescale-frontend@workspace:."
+  dependencies:
+    "@eslint/js": "npm:^10.0.1"
+    "@storybook/addon-essentials": "npm:^8.6.18"
+    "@storybook/addon-interactions": "npm:^8.6.18"
+    "@storybook/react": "npm:^8.6.18"
+    "@storybook/react-vite": "npm:^8.6.18"
+    "@storybook/test": "npm:^8.6.18"
+    "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/jest-dom": "npm:^6.4.8"
+    "@testing-library/react": "npm:^16.0.0"
+    "@testing-library/user-event": "npm:^14.5.2"
+    "@types/react": "npm:^19.2.17"
+    "@types/react-dom": "npm:^19.2.3"
+    "@typescript-eslint/eslint-plugin": "npm:^8.8.0"
+    "@typescript-eslint/parser": "npm:^8.8.0"
+    "@vitejs/plugin-react": "npm:^4.0.0"
+    eslint: "npm:^10.7.0"
+    eslint-plugin-react-hooks: "npm:^7.1.1"
+    eslint-plugin-storybook: "npm:^0.12.0"
+    glob: "npm:^13.0.6"
+    jsdom: "npm:^29.1.1"
+    msw: "npm:^2.15.0"
+    react: "npm:^19"
+    react-dom: "npm:^19"
+    storybook: "npm:^8.6.18"
+    typescript: "npm:~6.0.0"
+    uuid: "npm:^14.0.1"
+    vite: "npm:^6.0.0"
+    vitest: "npm:^4.1.10"
+  languageName: unknown
+  linkType: soft
 
 "html-encoding-sniffer@npm:^6.0.0":
   version: 6.0.0

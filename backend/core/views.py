@@ -13,14 +13,14 @@ from core.models import Player
 from core.services import claim_player
 from core.sessions import attach_session_cookie, new_device_token, resolve_player
 
-_CLAIM_SALT = "baseline-guesser.claim"
+_CLAIM_SALT = "hivescale.claim"
 _CLAIM_MAX_AGE = 60 * 30  # magic links are valid for 30 minutes
 
 
 @api_view(["GET"])
 def health(request) -> Response:
     """Liveness probe used by docker-compose healthchecks, CI, and Playwright."""
-    return Response({"status": "ok", "service": "baseline-guesser"})
+    return Response({"status": "ok", "service": "hivescale"})
 
 
 def _profile(player: Player) -> dict:

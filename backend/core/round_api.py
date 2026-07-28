@@ -53,7 +53,7 @@ GOOD_ROUND_THRESHOLD = 500.0
 
 #: A dealt round stays answerable for ten minutes.
 ROUND_TOKEN_MAX_AGE = 60 * 10
-_ROUND_SALT = "baseline-guesser.round"
+_ROUND_SALT = "hivescale.round"
 
 
 def issue_round_token(pairing: Pairing, player, issued_at: float | None = None) -> str:

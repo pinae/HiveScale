@@ -9,7 +9,7 @@ import SessionHeader from "./SessionHeader";
 describe("SessionHeader", () => {
   it("shows the brand and the running score", () => {
     render(<SessionHeader xp={4212} level={3} streak={0} />);
-    expect(screen.getByRole("heading", { name: /baseline guesser/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /hivescale/i })).toBeInTheDocument();
     expect(screen.getByTestId("session-level")).toHaveTextContent("3");
     expect(screen.getByTestId("session-xp")).toHaveTextContent("4212");
   });

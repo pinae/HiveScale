@@ -2,7 +2,7 @@
  * The persistent top bar for the game loop (WP-10): brand, running xp/level, and
  * the in-session hot-streak flame.
  */
-import WaveMark from "../WaveMark";
+import logoUrl from "../../hivescale-logo.svg";
 
 export interface SessionHeaderProps {
   xp: number;
@@ -16,8 +16,8 @@ export default function SessionHeader({ xp, level, streak, onShowStats }: Sessio
   return (
     <header className="bsg-session-header">
       <div className="bsg-session-brand">
-        <WaveMark size={32} />
-        <h1 className="bsg-session-title">Baseline Guesser</h1>
+        <img className="bsg-logo" src={logoUrl} alt="" width={30} height={30} />
+        <h1 className="bsg-session-title">HiveScale</h1>
       </div>
       <dl className="bsg-session-stats">
         <div>

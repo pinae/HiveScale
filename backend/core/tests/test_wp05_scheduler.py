@@ -1,6 +1,6 @@
 """WP-05 red tests: the pairing scheduler.
 
-Executable spec (docs/baseline-guesser-plan.md, WP-05 + §1.6/§1.7):
+Executable spec (docs/hivescale-plan.md, WP-05 + §1.6/§1.7):
 - 30/60/10 mix of under-sampled / well-sampled / fresh pairings, verified by a
   chi-squared test over 1,000 deals with a seeded RNG
 - deterministic given the injected RNG (no hidden randomness)

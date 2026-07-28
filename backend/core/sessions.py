@@ -15,7 +15,7 @@ from core.models import Player
 
 SESSION_COOKIE_NAME = "bg_player"
 SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 400  # ~13 months of anonymous identity
-_SIGNING_SALT = "baseline-guesser.session"
+_SIGNING_SALT = "hivescale.session"
 
 
 def _signer() -> TimestampSigner:

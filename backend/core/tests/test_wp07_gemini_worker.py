@@ -1,6 +1,6 @@
 """WP-07 red tests: the Gemini cold-start worker.
 
-Executable spec (docs/baseline-guesser-plan.md, WP-07 + §1.5/§3.1):
+Executable spec (docs/hivescale-plan.md, WP-07 + §1.5/§3.1):
 - ``generate_ai_distribution(pairing, client)`` asks a Gemini-shaped client for
   a distribution estimate, validates it against a JSON schema, and stores an
   ``AIDistribution`` versioned by model name and prompt version;

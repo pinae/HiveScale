@@ -3,7 +3,7 @@
 These tests are the executable specification for ``bglib.scoring`` and are
 committed BEFORE the implementation exists (TDD red).
 
-Covered properties (from docs/baseline-guesser-plan.md, WP-02):
+Covered properties (from docs/hivescale-plan.md, WP-02):
 - CRPS non-negative, and zero exactly at the true distribution
 - visible score always within [0, 1000]
 - distance component strictly monotonic in distance to the crowd median
