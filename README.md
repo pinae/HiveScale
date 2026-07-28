@@ -64,7 +64,9 @@ yarn e2e                       # Playwright: full-browser game loop (mocks the A
 > layer (`e2e/mocks.ts`), so they need no Django/Postgres/Redis. Playwright is
 > pinned to the version whose bundled Chromium matches the container's
 > pre-installed browser; on other machines run `yarn playwright install chromium`
-> once.
+> once. If `playwright install` has no build for your OS (e.g. Ubuntu 26.04),
+> point it at a system Chromium instead:
+> `PLAYWRIGHT_CHROMIUM_PATH=$(which chromium) yarn e2e`.
 
 > Peer-dependency note: Storybook 8.6 ships a few transitive packages with missing
 > peer declarations. `.yarnrc.yml` fixes these via `packageExtensions`, so a fresh
