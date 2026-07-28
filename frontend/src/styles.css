@@ -287,14 +287,15 @@ body {
 .bsg-reveal-ai-label { margin: 0; text-align: center; color: var(--bsg-accent); font-size: 0.85rem; }
 .bsg-reveal-note { margin: 0; text-align: center; color: var(--bsg-ink-dim); font-size: 0.85rem; }
 
-@media (prefers-reduced-motion: no-preference) {
-  .bsg-reveal[data-animated="true"] .bsg-reveal-bar {
-    animation: bsg-rise 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-  @keyframes bsg-rise {
-    from { transform: scaleY(0); }
-    to { transform: scaleY(1); }
-  }
+/* Gated solely by data-animated — the JS `active` flag already folds in the
+   reduced-motion check (RevealWave.usePrefersReducedMotion), so a second CSS
+   @media gate would be redundant and would block previewing the animation. */
+.bsg-reveal[data-animated="true"] .bsg-reveal-bar {
+  animation: bsg-rise 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes bsg-rise {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
 }
 
 /* --- Game loop screen (WP-10) ------------------------------------------- */

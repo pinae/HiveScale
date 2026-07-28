@@ -3,6 +3,32 @@ import type { Meta, StoryObj } from "@storybook/react";
 import RevealWave from "./RevealWave";
 import type { HumanReveal, PioneerReveal } from "../../api/reveal";
 
+/**
+ * Storybook `beforeEach`: report `prefers-reduced-motion: no-preference` while a
+ * story is on screen so the reveal animation is previewable even when the
+ * viewer's OS/browser asserts "reduce" (e.g. GNOME `enable-animations` off).
+ * The real app still honours the setting via RevealWave's own detection.
+ */
+function forceMotion() {
+  const original = window.matchMedia.bind(window);
+  window.matchMedia = ((query: string) =>
+    /prefers-reduced-motion/.test(query)
+      ? ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addEventListener() {},
+          removeEventListener() {},
+          addListener() {},
+          removeListener() {},
+          dispatchEvent: () => false,
+        } as MediaQueryList)
+      : original(query)) as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
+
 /** Build a normalized 20-bucket histogram peaked at the given buckets. */
 function hist(...peaks: number[]): number[] {
   const raw = Array.from({ length: 20 }, (_, i) =>
@@ -93,6 +119,9 @@ export const TooFastToCount: Story = {
 
 export const AnimatedRise: Story = {
   args: { reveal: human(), animate: true },
+  // Force motion on so the rise/count-up is visible regardless of the viewer's
+  // reduced-motion setting. Reload the story to replay it.
+  beforeEach: forceMotion,
 };
 
 const pioneer: PioneerReveal = {
