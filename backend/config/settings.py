@@ -129,6 +129,10 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 # Player level required to unlock Thing/Scale submission (WP-11, plan §1.6).
 CONTENT_SUGGEST_LEVEL = int(os.environ.get("CONTENT_SUGGEST_LEVEL", "10"))
 
+# Eligible answers before a pairing graduates to the human baseline (plan §1.5).
+# Production is 15; the dev stack lowers it so the crowd histogram appears fast.
+GRADUATION_MIN_ANSWERS = int(os.environ.get("GRADUATION_MIN_ANSWERS", "15"))
+
 # Account-claim magic-link delivery: "echo" returns the token in the API
 # response (dev/test); WP-11 adds real email delivery.
 CLAIM_LINK_DELIVERY = os.environ.get("CLAIM_LINK_DELIVERY", "echo")

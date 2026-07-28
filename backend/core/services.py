@@ -3,6 +3,7 @@
 Pure orchestration over ``bglib.scoring`` — all math lives in the library.
 """
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -15,7 +16,9 @@ SPEED_FLOOR_MS = 1500
 
 #: Eligible human answers required before a pairing "graduates" and scoring
 #: switches from the AI provisional estimate to the human baseline (plan §1.5).
-N_MIN_GRADUATION = 15
+#: Defaults to 15; lower it (e.g. to 3) via GRADUATION_MIN_ANSWERS in dev to reach
+#: a human baseline — and the animated crowd histogram — in just a few rounds.
+N_MIN_GRADUATION = getattr(settings, "GRADUATION_MIN_ANSWERS", 15)
 
 
 def eligible_guesses(pairing: Pairing):

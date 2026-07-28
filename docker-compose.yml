@@ -29,6 +29,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-only-insecure-key}
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      # Dev: graduate to the human baseline after just a few answers so the
+      # animated crowd histogram shows up quickly (production default is 15).
+      GRADUATION_MIN_ANSWERS: ${GRADUATION_MIN_ANSWERS:-3}
     ports:
       - "8000:8000"
     volumes:
