@@ -38,6 +38,78 @@
                 }
             }
         },
+        "/api/daily-wave/": {
+            "get": {
+                "operationId": "daily_wave_retrieve",
+                "description": "Today's Daily Wave and the player's progress through it.",
+                "tags": [
+                    "daily-wave"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/daily-wave/guess/": {
+            "post": {
+                "operationId": "daily_wave_guess_create",
+                "description": "Answer one slot of today's Daily Wave; returns the reveal + wave progress.",
+                "tags": [
+                    "daily-wave"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/health/": {
             "get": {
                 "operationId": "health_retrieve",

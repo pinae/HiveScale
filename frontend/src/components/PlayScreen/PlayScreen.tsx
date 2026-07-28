@@ -10,6 +10,7 @@
 import { useState } from "react";
 
 import ClaimPanel from "../ClaimPanel";
+import DailyWaveScreen from "../DailyWaveScreen";
 import RevealWave from "../RevealWave";
 import ScaleHeader from "../ScaleHeader";
 import SessionHeader from "../SessionHeader";
@@ -32,6 +33,7 @@ export default function PlayScreen({ className }: PlayScreenProps) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [statsError, setStatsError] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
+  const [showDailyWave, setShowDailyWave] = useState(false);
 
   // A claim magic link (?claim=…) confirms itself on load and folds in the
   // resulting profile; its notice is surfaced above the game.
@@ -49,6 +51,14 @@ export default function PlayScreen({ className }: PlayScreenProps) {
   }
 
   const rootClass = `bsg-play${className ? ` ${className}` : ""}`;
+
+  if (showDailyWave) {
+    return (
+      <div className={rootClass}>
+        <DailyWaveScreen onExit={() => setShowDailyWave(false)} />
+      </div>
+    );
+  }
 
   if (showClaim) {
     return (
@@ -98,6 +108,7 @@ export default function PlayScreen({ className }: PlayScreenProps) {
         level={profile.level}
         streak={streak}
         onShowStats={openStats}
+        onDailyWave={() => setShowDailyWave(true)}
         onClaim={() => setShowClaim(true)}
         isClaimed={loop.isClaimed}
       />

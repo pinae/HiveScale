@@ -194,8 +194,21 @@ def submit_guess(request) -> Response:
     if pairing is None:
         return _bad_request("This pairing no longer exists.")
 
-    # Response time is authoritative from the signed deal timestamp.
+    # Response time is authoritative from the signed deal timestamp; the speed
+    # floor can't be gamed by a client-supplied number.
     response_ms = max(0, int((_time.time() - ticket["ts"]) * 1000))
+    body, _guess = score_and_record(player, pairing, value, response_ms)
+    return Response(body)
+
+
+def score_and_record(player, pairing: Pairing, value: GuessValue, response_ms: int):
+    """Score a validated guess against the pre-answer baseline, persist it, and
+    return ``(reveal_body, guess)``.
+
+    Shared by the round loop and the Daily Wave so both score identically (plan
+    §1.4): the same speed floor, the same pre-guess snapshot, the same human /
+    pioneer split, and the same streak/xp folding on counted answers.
+    """
     flags = ["too_fast"] if response_ms < SPEED_FLOOR_MS else []
     counted = not flags
 
@@ -230,7 +243,7 @@ def submit_guess(request) -> Response:
 
     body["streak"] = {"hot": player.hot_streak, "daily": player.daily_streak}
     body["player"] = {"xp": player.xp, "level": player.level}
-    return Response(body)
+    return body, guess
 
 
 def _percentile(pairing, value, snapshot) -> float | None:

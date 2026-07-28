@@ -1,7 +1,7 @@
 from django.urls import path
 from drf_spectacular.views import SpectacularAPIView
 
-from core import content_api, round_api, views
+from core import content_api, daily_wave_api, round_api, views
 
 urlpatterns = [
     path("health/", views.health, name="health"),
@@ -12,6 +12,8 @@ urlpatterns = [
     path("session/claim/confirm/", views.claim_confirm, name="claim-confirm"),
     path("round/next/", round_api.next_round, name="round-next"),
     path("round/guess/", round_api.submit_guess, name="round-guess"),
+    path("daily-wave/", daily_wave_api.daily_wave, name="daily-wave"),
+    path("daily-wave/guess/", daily_wave_api.daily_wave_guess, name="daily-wave-guess"),
     path("content/things/", content_api.submit_thing, name="content-thing"),
     path("content/scales/", content_api.submit_scale, name="content-scale"),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),

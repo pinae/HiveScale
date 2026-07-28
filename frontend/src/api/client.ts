@@ -86,6 +86,46 @@ export async function confirmClaim(claimToken: string): Promise<ClaimConfirmResu
   return readJson(await jsonPost("/api/session/claim/confirm/", { claim_token: claimToken }));
 }
 
+/** One blind slot of the Daily Wave (identity only — no distribution). */
+export interface DailyWaveSlot {
+  index: number;
+  pairing_id: number;
+  thing: { text: string };
+  scale: { left: string; right: string };
+  wave_token: string;
+}
+
+/** The player's progress through today's Daily Wave (plan §2.2). */
+export interface DailyWaveState {
+  date: string;
+  total: number;
+  answered: number;
+  completed: boolean;
+  /** Result emoji for each answered slot, in order. */
+  results: string[];
+  score: number;
+  next: DailyWaveSlot | null;
+  daily_streak: number;
+  /** The shareable emoji summary, present once the wave is completed. */
+  share_string: string | null;
+}
+
+/** A Daily Wave guess reveals the round *and* carries the updated wave progress. */
+export type DailyWaveReveal = RevealPayload & { wave: DailyWaveState };
+
+export async function fetchDailyWave(): Promise<DailyWaveState> {
+  return readJson(await fetch("/api/daily-wave/"));
+}
+
+export async function submitDailyWaveGuess(input: {
+  wave_token: string;
+  center: number;
+  width_left: number;
+  width_right: number;
+}): Promise<DailyWaveReveal> {
+  return readJson(await jsonPost("/api/daily-wave/guess/", input));
+}
+
 export async function fetchNextRound(): Promise<Round> {
   return readJson(await fetch("/api/round/next/"));
 }

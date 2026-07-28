@@ -114,6 +114,33 @@ test.describe("real backend game loop", () => {
     expect(await sessionXp(page)).toBe(earned);
   });
 
+  test("completes the Daily Wave and copies the share string to the clipboard", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto("/");
+    await waitForRound(page);
+
+    await page.getByRole("button", { name: /daily/i }).click();
+
+    // Play every slot. Speed doesn't matter here — the wave still completes and
+    // grades — so answer straight through rather than dwelling each time.
+    const emoji = page.getByTestId("wave-result-emoji");
+    for (let i = 0; i < 15; i++) {
+      await page.getByRole("button", { name: /lock it in/i }).click();
+      await page.getByRole("button", { name: /next slot|see your result/i }).click();
+      if (await emoji.isVisible().catch(() => false)) break;
+    }
+
+    await expect(emoji).toBeVisible();
+    await page.getByRole("button", { name: /copy result/i }).click();
+    await expect(page.getByText(/result copied/i)).toBeVisible();
+
+    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboard).toContain("HiveScale");
+  });
+
   test("the stats page shows a real archetype and returns to the game", async ({ page }) => {
     await page.goto("/");
     await waitForRound(page);

@@ -7,6 +7,10 @@ export const handlers = [
     HttpResponse.json({})),
   http.post("/api/content/things/", () =>
     HttpResponse.json({})),
+  http.get("/api/daily-wave/", () =>
+    HttpResponse.json({})),
+  http.post("/api/daily-wave/guess/", () =>
+    HttpResponse.json({})),
   http.get("/api/health/", () =>
     HttpResponse.json({})),
   http.get("/api/me/", () =>

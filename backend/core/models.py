@@ -194,3 +194,33 @@ class DailyWave(models.Model):
 
     def __str__(self) -> str:
         return f"DailyWave {self.date} ({len(self.pairing_ids)} pairings)"
+
+
+class DailyWaveEntry(models.Model):
+    """One player's answer to one slot of a day's Daily Wave (plan §2.2).
+
+    Records progress and the per-slot visible score so a wave is answered once,
+    in order, and can be summarised into the shareable emoji result.
+    """
+
+    wave = models.ForeignKey(DailyWave, on_delete=models.CASCADE, related_name="entries")
+    player = models.ForeignKey(
+        Player, on_delete=models.CASCADE, related_name="daily_wave_entries"
+    )
+    index = models.PositiveIntegerField()
+    guess = models.OneToOneField(
+        Guess, on_delete=models.CASCADE, related_name="daily_wave_entry"
+    )
+    visible_points = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["index"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["wave", "player", "index"], name="unique_daily_wave_slot"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"DailyWaveEntry(wave={self.wave_id}, player={self.player_id}, i={self.index})"

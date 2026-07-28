@@ -10,6 +10,8 @@ export interface SessionHeaderProps {
   streak: number;
   /** When provided, renders a button that opens the stats page. */
   onShowStats?: () => void;
+  /** When provided, renders a button that opens the Daily Wave (WP-11). */
+  onDailyWave?: () => void;
   /** When provided and the session isn't claimed, offers to save progress. */
   onClaim?: () => void;
   /** Whether the session is already tied to an account (WP-11). */
@@ -21,6 +23,7 @@ export default function SessionHeader({
   level,
   streak,
   onShowStats,
+  onDailyWave,
   onClaim,
   isClaimed = false,
 }: SessionHeaderProps) {
@@ -54,6 +57,11 @@ export default function SessionHeader({
         ) : onClaim ? (
           <button type="button" className="bsg-btn bsg-session-claimbtn" onClick={onClaim}>
             Save progress
+          </button>
+        ) : null}
+        {onDailyWave ? (
+          <button type="button" className="bsg-btn bsg-session-wavebtn" onClick={onDailyWave}>
+            🌊 Daily
           </button>
         ) : null}
         {onShowStats ? (
