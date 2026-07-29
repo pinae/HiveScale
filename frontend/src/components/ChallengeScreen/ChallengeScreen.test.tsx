@@ -40,7 +40,9 @@ describe("ChallengeScreen", () => {
     await user.type(await screen.findByLabelText(/your thing/i), "sentient toaster");
     await user.click(screen.getByRole("button", { name: /submit for/i }));
 
-    expect(await screen.findByText(/\+25,000 XP/)).toBeInTheDocument();
+    // The XP is rendered with toLocaleString(), so the thousands separator is
+    // the viewer's locale (25,000 / 25.000 / 25 000) — match any of them.
+    expect(await screen.findByText(/\+\s*25[\s.,]?000 XP/)).toBeInTheDocument();
     expect(onReward).toHaveBeenCalledWith(result);
     expect(screen.getByRole("button", { name: /another challenge/i })).toBeInTheDocument();
   });
