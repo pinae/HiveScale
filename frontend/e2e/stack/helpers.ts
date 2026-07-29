@@ -19,13 +19,21 @@ export async function sessionXp(page: Page): Promise<number> {
   return Number(await page.getByTestId("session-xp").textContent());
 }
 
+/** Dismiss a level-up explainer card if one is currently on screen. */
+export async function dismissLevelUp(page: Page) {
+  const gotIt = page.getByRole("button", { name: /got it/i });
+  if (await gotIt.isVisible().catch(() => false)) await gotIt.click();
+}
+
 /**
  * Play the current round as a *counted* answer: dwell past the server's speed
  * floor so the reveal isn't flagged too-fast, submit, and wait for the reveal.
+ * Clears any unlock card the round may have popped so the loop stays clickable.
  */
 export async function playCountedRound(page: Page) {
   await waitForRound(page);
   await page.waitForTimeout(SPEED_FLOOR_MS + 300);
   await submitButton(page).click();
   await expect(page.getByRole("region", { name: /reveal/i })).toBeVisible();
+  await dismissLevelUp(page);
 }

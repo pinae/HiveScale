@@ -12,6 +12,7 @@ import { useState } from "react";
 import ChallengeScreen from "../ChallengeScreen";
 import ClaimPanel from "../ClaimPanel";
 import DailyWaveScreen from "../DailyWaveScreen";
+import LevelUpCard from "../LevelUpCard";
 import RevealWave from "../RevealWave";
 import ScaleRequestScreen from "../ScaleRequestScreen";
 import VoteScreen from "../VoteScreen";
@@ -220,6 +221,10 @@ export default function PlayScreen({ className }: PlayScreenProps) {
           </section>
         ) : null}
       </main>
+
+      {loop.pendingMilestones.length > 0 ? (
+        <LevelUpCard level={loop.pendingMilestones[0]} onDismiss={loop.dismissMilestone} />
+      ) : null}
     </div>
   );
 }

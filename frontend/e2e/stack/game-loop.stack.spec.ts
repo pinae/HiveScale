@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-import { SPEED_FLOOR_MS, playCountedRound, sessionXp, submitButton, waitForRound } from "./helpers";
+import {
+  SPEED_FLOOR_MS,
+  dismissLevelUp,
+  playCountedRound,
+  sessionXp,
+  submitButton,
+  waitForRound,
+} from "./helpers";
 
 /**
  * WP-12 integration suite: the real Django backend (seeded sqlite, Gemini faked)
@@ -169,6 +176,8 @@ test.describe("real backend game loop", () => {
     await expect(page.getByText(/in the pool for review/i)).toBeVisible();
     await page.getByRole("button", { name: /back to the game/i }).first().click();
 
+    // The 25k bonus jumps the fresh player past level 2 — clear the unlock card.
+    await dismissLevelUp(page);
     await waitForRound(page);
     // The flat challenge bonus (25k) is now folded into the running XP.
     expect(await sessionXp(page)).toBeGreaterThan(before);

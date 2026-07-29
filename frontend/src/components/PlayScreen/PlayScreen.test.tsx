@@ -2,7 +2,7 @@
  * WP-10 flows (against MSW): a happy round, a pioneer round, the too-fast toast,
  * next-round preloading during the reveal, and error/offline retry.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -92,6 +92,23 @@ describe("PlayScreen", () => {
     await user.click(screen.getByRole("button", { name: /next round/i }));
     expect(await screen.findByRole("heading", { name: "Pineapple pizza" })).toBeInTheDocument();
     expect(nextCount).toBe(2); // advancing used the preloaded round, no extra fetch
+  });
+
+  it("pops a level-up explainer when a round crosses an unlock milestone", async () => {
+    // Boot at level 1, then a round returns level 2 — the multiplier unlock.
+    server.use(
+      sessionOk,
+      http.get("/api/round/next/", () => HttpResponse.json(roundA)),
+      http.post("/api/round/guess/", () => HttpResponse.json(humanReveal(true))),
+    );
+    const user = userEvent.setup();
+    render(<PlayScreen />);
+
+    await user.click(await screen.findByRole("button", { name: /lock it in/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /multiplier unlocked/i });
+    await user.click(within(dialog).getByRole("button", { name: /got it/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("shows the pioneer payload on an ungraduated pairing", async () => {

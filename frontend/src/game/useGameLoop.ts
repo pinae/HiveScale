@@ -24,6 +24,9 @@ export const DEFAULT_GUESS: GuessValue = { center: 50, widthLeft: 15, widthRight
 
 const NO_UNLOCKS: Unlocks = { vote: false, challenge: false, scale: false };
 
+/** Levels that unlock a new capability and get an explainer card. */
+export const MILESTONE_LEVELS = [2, 5, 10, 15];
+
 /** Running player progression surfaced in the header (xp/level/multiplier). */
 export interface ProfileState {
   xp: number;
@@ -57,6 +60,9 @@ export interface GameLoop {
   profile: ProfileState;
   streak: number;
   isClaimed: boolean;
+  /** Unlock milestones just crossed during play, awaiting an explainer card. */
+  pendingMilestones: number[];
+  dismissMilestone: () => void;
   error: string | null;
   submit: () => void;
   next: () => void;
@@ -89,15 +95,33 @@ export function useGameLoop(): GameLoop {
   const [streak, setStreak] = useState(0);
   const [isClaimed, setIsClaimed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingMilestones, setPendingMilestones] = useState<number[]>([]);
 
   const guessRef = useRef(guess);
   const roundRef = useRef<Round | null>(round);
   const preloaded = useRef<Round | null>(null);
   const failedAction = useRef<FailedAction | null>(null);
+  const lastLevelRef = useRef(1);
   useEffect(() => {
     guessRef.current = guess;
     roundRef.current = round;
   });
+
+  // Apply a profile update, and (only for genuine play events) queue an explainer
+  // card for any unlock milestone the player just crossed. Boot and account-claim
+  // updates pass `checkMilestones = false` so a returning player isn't spammed.
+  const applyProfile = useCallback((next: ProfileState, checkMilestones: boolean) => {
+    if (checkMilestones && next.level > lastLevelRef.current) {
+      const crossed = MILESTONE_LEVELS.filter(
+        (m) => lastLevelRef.current < m && m <= next.level,
+      );
+      if (crossed.length) setPendingMilestones((queue) => [...queue, ...crossed]);
+    }
+    lastLevelRef.current = next.level;
+    setProfile(next);
+  }, []);
+
+  const dismissMilestone = useCallback(() => setPendingMilestones((queue) => queue.slice(1)), []);
 
   const fail = useCallback((action: FailedAction, message: string) => {
     failedAction.current = action;
@@ -119,13 +143,13 @@ export function useGameLoop(): GameLoop {
     try {
       const { player } = await startSession();
       // A returning (claimed) player arrives with real xp/level and a claim flag.
-      setProfile(profileFrom(player));
+      applyProfile(profileFrom(player), false);
       setIsClaimed(player.is_claimed);
       applyRound(await fetchNextRound());
     } catch {
       fail("boot", "Couldn't reach the game. Check your connection.");
     }
-  }, [applyRound, fail]);
+  }, [applyProfile, applyRound, fail]);
 
   const syncProfile = useCallback(
     (p: {
@@ -134,16 +158,18 @@ export function useGameLoop(): GameLoop {
       multiplier?: number;
       progress?: LevelProgress;
       unlocks?: Unlocks;
-    }) => setProfile(profileFrom(p, p.progress ?? null, p.unlocks ?? NO_UNLOCKS)),
-    [],
+    }) => applyProfile(profileFrom(p, p.progress ?? null, p.unlocks ?? NO_UNLOCKS), true),
+    [applyProfile],
   );
 
   const markClaimed = useCallback(
     (player: Profile) => {
-      syncProfile(player);
+      // A claim/merge can change level, but it isn't a "just reached" moment —
+      // update silently without firing an explainer card.
+      applyProfile(profileFrom(player), false);
       setIsClaimed(player.is_claimed);
     },
-    [syncProfile],
+    [applyProfile],
   );
 
   const submit = useCallback(async () => {
@@ -161,7 +187,7 @@ export function useGameLoop(): GameLoop {
       });
       setReveal(rev);
       setSubmittedGuess(g);
-      setProfile(profileFrom(rev.player, rev.progress ?? null, rev.unlocks ?? NO_UNLOCKS));
+      applyProfile(profileFrom(rev.player, rev.progress ?? null, rev.unlocks ?? NO_UNLOCKS), true);
       setStreak(rev.streak.hot);
       setPhase("revealing");
       // Preload the next round during the reveal (errors surface on Next).
@@ -176,7 +202,7 @@ export function useGameLoop(): GameLoop {
     } catch {
       fail("submit", "Couldn't submit your guess.");
     }
-  }, [fail]);
+  }, [applyProfile, fail]);
 
   const next = useCallback(async () => {
     if (preloaded.current) {
@@ -221,6 +247,8 @@ export function useGameLoop(): GameLoop {
     profile,
     streak,
     isClaimed,
+    pendingMilestones,
+    dismissMilestone,
     error,
     submit,
     next,

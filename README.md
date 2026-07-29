@@ -135,7 +135,10 @@ reaching level 5 inside a fortnight *requires* sustaining a high multiplier.
 
 The backend reports these as an `unlocks` object on the session/reveal payloads,
 so the front end gates each feature by what the server actually allows (letting the
-dev/e2e stacks unlock features early just by lowering a threshold).
+dev/e2e stacks unlock features early just by lowering a threshold). When a round
+carries the player across one of these levels, an explainer card (`LevelUpCard`)
+pops up to introduce the new capability — fired only on genuine in-play crossings,
+never on boot or an account claim, so a returning player isn't spammed.
 
 ## Session API (WP-04) — curl demo
 

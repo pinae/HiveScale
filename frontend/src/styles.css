@@ -389,6 +389,55 @@ body {
   font-weight: 700;
 }
 
+/* --- LevelUpCard (unlock explainers) ----------------------------------- */
+
+.bsg-levelup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, #030811 78%, transparent);
+}
+.bsg-levelup-card {
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-radius: var(--bsg-radius);
+  background: var(--bsg-bg-raised);
+  border: 1px solid color-mix(in srgb, var(--bsg-wave) 45%, transparent);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.bsg-levelup-badge {
+  margin: 0;
+  align-self: center;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--bsg-wave-deep), var(--bsg-wave));
+  color: #06121f;
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.bsg-levelup-title { margin: 0; font-size: 1.35rem; }
+.bsg-levelup-line { margin: 0; color: var(--bsg-ink-dim); line-height: 1.5; text-align: left; }
+.bsg-levelup-card .bsg-btn { margin-top: 0.5rem; align-self: center; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .bsg-levelup-card { animation: bsg-levelup-pop 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  @keyframes bsg-levelup-pop {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+}
+
 /* --- StatsPanel (WP-11) ------------------------------------------------- */
 
 .bsg-session-actions { display: flex; align-items: center; gap: 0.5rem; }

@@ -33,7 +33,9 @@ export const humanReveal = (counted = true) => ({
   percentile: 76,
   bimodal: false,
   streak: { hot: counted ? 3 : 0 },
-  player: { xp: counted ? 812 : 0, level: 2 },
+  // Level 1 keeps the UI mechanics suite free of the level-up explainer card,
+  // which belongs to the progression tests, not the loop-mechanics ones.
+  player: { xp: counted ? 812 : 0, level: 1 },
 });
 
 /**
