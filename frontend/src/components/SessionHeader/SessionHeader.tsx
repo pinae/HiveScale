@@ -2,12 +2,17 @@
  * The persistent top bar for the game loop (WP-10): brand, running xp/level, and
  * the in-session hot-streak flame.
  */
+import type { LevelProgress } from "../../api/reveal";
 import logoUrl from "../../hivescale-logo.svg";
 
 export interface SessionHeaderProps {
   xp: number;
   level: number;
   streak: number;
+  /** Calibration XP multiplier (×1 hides the chip). */
+  multiplier?: number;
+  /** Position within the current level, for the progress bar. */
+  progress?: LevelProgress | null;
   /** When provided, renders a button that opens the stats page. */
   onShowStats?: () => void;
   /** When provided, renders a button that opens the Daily Wave (WP-11). */
@@ -22,11 +27,17 @@ export default function SessionHeader({
   xp,
   level,
   streak,
+  multiplier = 1,
+  progress = null,
   onShowStats,
   onDailyWave,
   onClaim,
   isClaimed = false,
 }: SessionHeaderProps) {
+  const pct =
+    progress && progress.level_span > 0
+      ? Math.max(0, Math.min(100, (progress.into_level / progress.level_span) * 100))
+      : 0;
   return (
     <header className="bsg-session-header">
       <div className="bsg-session-brand">
@@ -42,6 +53,12 @@ export default function SessionHeader({
           <dt>XP</dt>
           <dd data-testid="session-xp">{xp}</dd>
         </div>
+        {multiplier > 1 ? (
+          <div className="bsg-session-mult" aria-label={`XP multiplier ${multiplier} times`}>
+            <dt aria-hidden="true">Mult</dt>
+            <dd data-testid="session-multiplier">×{multiplier}</dd>
+          </div>
+        ) : null}
         {streak >= 3 ? (
           <div className="bsg-session-streak" aria-label={`Hot streak: ${streak}`}>
             <dt aria-hidden="true">Streak</dt>
@@ -70,6 +87,19 @@ export default function SessionHeader({
           </button>
         ) : null}
       </div>
+      {progress ? (
+        <div
+          className="bsg-session-progress"
+          data-testid="session-progress"
+          role="progressbar"
+          aria-label={`Progress to level ${level + 1}`}
+          aria-valuenow={Math.round(pct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div className="bsg-session-progress-fill" style={{ width: `${pct}%` }} />
+        </div>
+      ) : null}
     </header>
   );
 }

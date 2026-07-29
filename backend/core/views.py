@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from core import leveling
 from core.archetypes import calibration_summary, classify
 from core.models import Player
 from core.services import claim_player
@@ -24,7 +25,13 @@ def health(request) -> Response:
 
 
 def _profile(player: Player) -> dict:
-    return {"level": player.level, "xp": player.xp, "is_claimed": player.user_id is not None}
+    return {
+        "level": player.level,
+        "xp": player.xp,
+        "multiplier": player.xp_multiplier,
+        "progress": leveling.level_progress(player.xp),
+        "is_claimed": player.user_id is not None,
+    }
 
 
 def _unauthorized() -> Response:

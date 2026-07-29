@@ -30,6 +30,17 @@ export interface AiEstimate {
 export interface PlayerState {
   xp: number;
   level: number;
+  /** Calibration XP multiplier ×1–×10 (present once the progression ships). */
+  multiplier?: number;
+}
+
+/** Position within the current level, for a progress bar (plan progression). */
+export interface LevelProgress {
+  level: number;
+  xp: number;
+  into_level: number;
+  level_span: number;
+  next_level_xp: number;
 }
 
 export interface HumanReveal {
@@ -41,6 +52,7 @@ export interface HumanReveal {
   bimodal: boolean;
   streak: { hot: number; daily?: number };
   player: PlayerState;
+  progress?: LevelProgress;
 }
 
 export interface PioneerReveal {
@@ -50,6 +62,7 @@ export interface PioneerReveal {
   ai_estimate: AiEstimate | null;
   streak: { hot: number; daily?: number };
   player: PlayerState;
+  progress?: LevelProgress;
 }
 
 export type RevealPayload = HumanReveal | PioneerReveal;

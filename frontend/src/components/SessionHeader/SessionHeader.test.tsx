@@ -35,4 +35,15 @@ describe("SessionHeader", () => {
     expect(screen.queryByRole("button", { name: /save progress/i })).not.toBeInTheDocument();
     expect(screen.getByTestId("session-saved")).toBeInTheDocument();
   });
+
+  it("shows the XP multiplier only above ×1, and a level progress bar", () => {
+    const progress = { level: 3, xp: 5000, into_level: 3500, level_span: 7000, next_level_xp: 8000 };
+    const { rerender } = render(<SessionHeader xp={5000} level={3} streak={0} multiplier={1} />);
+    expect(screen.queryByTestId("session-multiplier")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("session-progress")).not.toBeInTheDocument();
+
+    rerender(<SessionHeader xp={5000} level={3} streak={0} multiplier={4} progress={progress} />);
+    expect(screen.getByTestId("session-multiplier")).toHaveTextContent("×4");
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+  });
 });

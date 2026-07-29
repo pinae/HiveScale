@@ -24,6 +24,7 @@ from rest_framework.test import APIClient
 
 from bglib.scoring import Guess as GuessValue
 from bglib.scoring import SnapshotStats, crps, guess_to_distribution, visible_score
+from core import leveling
 from core.models import (
     AIDistribution,
     DistributionSnapshot,
@@ -269,6 +270,37 @@ def test_calibration_stats_fold_after_human_scored_rounds() -> None:
     player.refresh_from_db()
     assert player.calibration_stats["n"] == 1
     assert player.calibration_stats["total_width"] == 40.0
+
+
+def test_multiplier_multiplies_banked_xp_for_a_leveled_player() -> None:
+    pairing = _graduated_pairing()
+    client = APIClient()
+    player = _session(client)
+    # A level-2 player carrying a ×3 multiplier.
+    Player.objects.filter(pk=player.pk).update(
+        level=2, xp=leveling.threshold_for_level(2), xp_multiplier=3
+    )
+    before = Player.objects.get(pk=player.pk).xp
+
+    body = _submit(client, _slow_token(pairing, player), center=50.0, wl=30, wr=30).json()
+
+    player.refresh_from_db()
+    assert player.xp - before == int(round(body["score"]["total"] * 3))  # ×3 applied
+    covered = body["score"]["covered_fraction"]
+    expected = 4 if covered >= leveling.OVERLAP_TO_ADVANCE and not body["bimodal"] else 1
+    assert body["player"]["multiplier"] == expected
+    assert body["player"]["level"] == player.level
+    assert body["progress"]["level"] == player.level
+
+
+def test_level_one_players_get_no_multiplier() -> None:
+    pairing = _graduated_pairing()
+    client = APIClient()
+    player = _session(client)  # brand new -> level 1
+    body = _submit(client, _slow_token(pairing, player), center=50.0, wl=15, wr=15).json()
+    player.refresh_from_db()
+    assert player.xp == int(round(body["score"]["total"]))  # ×1 at level 1
+    assert body["player"]["multiplier"] == 1
 
 
 # --- Pioneer path & graduation ----------------------------------------------

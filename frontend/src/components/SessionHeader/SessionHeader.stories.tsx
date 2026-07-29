@@ -25,3 +25,16 @@ export const WithActions: Story = {
 export const Claimed: Story = {
   args: { onShowStats: () => {}, onDailyWave: () => {}, onClaim: () => {}, isClaimed: true },
 };
+
+export const LoadedMultiplier: Story = {
+  args: {
+    xp: 5_000,
+    level: 3,
+    streak: 4,
+    multiplier: 7,
+    progress: { level: 3, xp: 5_000, into_level: 3_500, level_span: 7_000, next_level_xp: 8_000 },
+    onShowStats: () => {},
+    onDailyWave: () => {},
+    onClaim: () => {},
+  },
+};

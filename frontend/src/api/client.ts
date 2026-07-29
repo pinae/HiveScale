@@ -3,7 +3,7 @@
  * (`/api/...`), proxied to Django in dev. Responses are typed against the
  * backend contract; non-2xx responses raise {@link ApiError}.
  */
-import type { RevealPayload } from "./reveal";
+import type { LevelProgress, RevealPayload } from "./reveal";
 
 export interface Round {
   pairing_id: number;
@@ -16,6 +16,8 @@ export interface Profile {
   level: number;
   xp: number;
   is_claimed: boolean;
+  multiplier?: number;
+  progress?: LevelProgress;
 }
 
 export interface Stats {

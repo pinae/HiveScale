@@ -36,6 +36,7 @@ from bglib.scoring import (
     visible_score,
 )
 from bglib.scoring import Guess as GuessValue
+from core import leveling
 from core.models import Guess, Pairing, RoundScore
 from core.scheduler import NoPairingAvailable, deal, serialize_deal
 from core.services import SPEED_FLOOR_MS, eligible_guesses, recompute_snapshot
@@ -238,12 +239,37 @@ def score_and_record(player, pairing: Pairing, value: GuessValue, response_ms: i
             body = _pioneer_reveal(player, pairing, guess, counted)
 
         if counted:
+            _apply_progression(player, body)
             recompute_snapshot(pairing)
             register_play(player, timezone.localdate())
 
     body["streak"] = {"hot": player.hot_streak, "daily": player.daily_streak}
-    body["player"] = {"xp": player.xp, "level": player.level}
+    body["player"] = {
+        "xp": player.xp,
+        "level": player.level,
+        "multiplier": player.xp_multiplier,
+    }
+    body["progress"] = leveling.level_progress(player.xp)
     return body, guess
+
+
+def _apply_progression(player, body: dict) -> None:
+    """Bank a counted round's XP (times the multiplier), re-level, and roll the
+    multiplier for the next round (plan progression)."""
+    visible = body["score"]["total"] if body["source"] == "human" else body["pioneer_bonus"]
+    covered = body["score"]["covered_fraction"] if body["source"] == "human" else None
+
+    effective = leveling.effective_multiplier(player.level, player.xp_multiplier)
+    player.xp += int(round(visible * effective))
+    player.level = leveling.level_for_xp(player.xp)
+    player.xp_multiplier = leveling.next_multiplier(
+        player.xp_multiplier,
+        level=player.level,
+        source=body["source"],
+        bimodal=bool(body.get("bimodal", False)),
+        covered_fraction=covered,
+    )
+    player.save(update_fields=["xp", "level", "xp_multiplier"])
 
 
 def _percentile(pairing, value, snapshot) -> float | None:
@@ -282,7 +308,8 @@ def _human_reveal(player, guess, value, snapshot, percentile, counted) -> dict:
     )
 
     if counted:
-        player.xp += int(round(breakdown.total))
+        # XP + level + multiplier are applied centrally in _apply_progression;
+        # here we only fold the streak and the running calibration curve.
         player.hot_streak = (
             player.hot_streak + 1 if breakdown.total >= GOOD_ROUND_THRESHOLD else 0
         )
@@ -297,7 +324,7 @@ def _human_reveal(player, guess, value, snapshot, percentile, counted) -> dict:
             "hits": folded.hits,
             "total_width": folded.total_width,
         }
-        player.save(update_fields=["xp", "hot_streak", "calibration_stats"])
+        player.save(update_fields=["hot_streak", "calibration_stats"])
 
     return {
         "source": "human",
@@ -338,9 +365,7 @@ def _pioneer_reveal(player, pairing, guess, counted) -> dict:
         crps=None,
         components={"pioneer": True, "counted": counted},
     )
-    if counted:
-        player.xp += PIONEER_BONUS
-        player.save(update_fields=["xp"])
+    # XP for counted pioneer rounds is banked centrally in _apply_progression.
 
     return {
         "source": "pioneer",

@@ -29,6 +29,9 @@ class Player(models.Model):
     device_token = models.CharField(max_length=64, unique=True)
     level = models.PositiveIntegerField(default=1)
     xp = models.PositiveIntegerField(default=0)
+    xp_multiplier = models.PositiveIntegerField(
+        default=1, help_text="Calibration multiplier (×1–×10); grows on well-covered rounds."
+    )
     hot_streak = models.PositiveIntegerField(default=0, help_text="Consecutive good rounds.")
     daily_streak = models.PositiveIntegerField(default=0, help_text="Consecutive days played.")
     last_played_on = models.DateField(null=True, blank=True)

@@ -51,7 +51,10 @@ def test_new_device_gets_a_new_player_and_an_httponly_cookie() -> None:
     body = _start_session(client)
 
     assert Player.objects.count() == 1
-    assert body["player"] == {"level": 1, "xp": 0, "is_claimed": False}
+    player = body["player"]
+    assert (player["level"], player["xp"], player["is_claimed"]) == (1, 0, False)
+    assert player["multiplier"] == 1  # progression fields ride along (plan §2.x)
+    assert player["progress"]["level"] == 1
     assert body["created"] is True
 
     cookie = client.cookies[SESSION_COOKIE_NAME]
@@ -89,7 +92,11 @@ def test_me_returns_the_current_player_profile() -> None:
     _start_session(client)
     Player.objects.update(level=4, xp=1234)
     body = client.get(ME_URL).json()
-    assert body == {"level": 4, "xp": 1234, "is_claimed": False}
+    assert body["level"] == 4
+    assert body["xp"] == 1234
+    assert body["is_claimed"] is False
+    assert body["multiplier"] == 1
+    assert "progress" in body
 
 
 def test_anonymous_players_store_no_pii() -> None:

@@ -63,7 +63,14 @@ export default function PlayScreen({ className }: PlayScreenProps) {
   if (showClaim) {
     return (
       <div className={rootClass}>
-        <SessionHeader xp={profile.xp} level={profile.level} streak={streak} isClaimed={loop.isClaimed} />
+        <SessionHeader
+          xp={profile.xp}
+          level={profile.level}
+          streak={streak}
+          multiplier={profile.multiplier}
+          progress={profile.progress}
+          isClaimed={loop.isClaimed}
+        />
         <main className="bsg-play-body">
           <ClaimPanel
             onClaimed={(result) => {
@@ -80,7 +87,14 @@ export default function PlayScreen({ className }: PlayScreenProps) {
   if (showStats) {
     return (
       <div className={rootClass}>
-        <SessionHeader xp={profile.xp} level={profile.level} streak={streak} isClaimed={loop.isClaimed} />
+        <SessionHeader
+          xp={profile.xp}
+          level={profile.level}
+          streak={streak}
+          multiplier={profile.multiplier}
+          progress={profile.progress}
+          isClaimed={loop.isClaimed}
+        />
         <main className="bsg-play-body">
           {stats ? (
             <StatsPanel stats={stats} />
@@ -107,6 +121,8 @@ export default function PlayScreen({ className }: PlayScreenProps) {
         xp={profile.xp}
         level={profile.level}
         streak={streak}
+        multiplier={profile.multiplier}
+        progress={profile.progress}
         onShowStats={openStats}
         onDailyWave={() => setShowDailyWave(true)}
         onClaim={() => setShowClaim(true)}

@@ -15,14 +15,27 @@ import {
   startSession,
   submitGuess,
 } from "../api/client";
-import type { RevealPayload } from "../api/reveal";
+import type { LevelProgress, RevealPayload } from "../api/reveal";
 import type { GuessValue } from "../components/WaveSlider";
 
 export type Phase = "booting" | "guessing" | "submitting" | "revealing" | "advancing" | "error";
 
 export const DEFAULT_GUESS: GuessValue = { center: 50, widthLeft: 15, widthRight: 15 };
 
+/** Running player progression surfaced in the header (xp/level/multiplier). */
+export interface ProfileState {
+  xp: number;
+  level: number;
+  multiplier: number;
+  progress: LevelProgress | null;
+}
+
 type FailedAction = "boot" | "submit" | "next";
+
+const profileFrom = (
+  p: { xp: number; level: number; multiplier?: number; progress?: LevelProgress },
+  progress: LevelProgress | null = p.progress ?? null,
+): ProfileState => ({ xp: p.xp, level: p.level, multiplier: p.multiplier ?? 1, progress });
 
 export interface GameLoop {
   phase: Phase;
@@ -31,7 +44,7 @@ export interface GameLoop {
   setGuess: (g: GuessValue) => void;
   reveal: RevealPayload | null;
   submittedGuess: GuessValue | null;
-  profile: { xp: number; level: number };
+  profile: ProfileState;
   streak: number;
   isClaimed: boolean;
   error: string | null;
@@ -48,7 +61,12 @@ export function useGameLoop(): GameLoop {
   const [guess, setGuess] = useState<GuessValue>(DEFAULT_GUESS);
   const [reveal, setReveal] = useState<RevealPayload | null>(null);
   const [submittedGuess, setSubmittedGuess] = useState<GuessValue | null>(null);
-  const [profile, setProfile] = useState({ xp: 0, level: 1 });
+  const [profile, setProfile] = useState<ProfileState>({
+    xp: 0,
+    level: 1,
+    multiplier: 1,
+    progress: null,
+  });
   const [streak, setStreak] = useState(0);
   const [isClaimed, setIsClaimed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +100,7 @@ export function useGameLoop(): GameLoop {
     try {
       const { player } = await startSession();
       // A returning (claimed) player arrives with real xp/level and a claim flag.
-      setProfile({ xp: player.xp, level: player.level });
+      setProfile(profileFrom(player));
       setIsClaimed(player.is_claimed);
       applyRound(await fetchNextRound());
     } catch {
@@ -91,7 +109,7 @@ export function useGameLoop(): GameLoop {
   }, [applyRound, fail]);
 
   const markClaimed = useCallback((player: Profile) => {
-    setProfile({ xp: player.xp, level: player.level });
+    setProfile(profileFrom(player));
     setIsClaimed(player.is_claimed);
   }, []);
 
@@ -110,7 +128,7 @@ export function useGameLoop(): GameLoop {
       });
       setReveal(rev);
       setSubmittedGuess(g);
-      setProfile(rev.player);
+      setProfile(profileFrom(rev.player, rev.progress ?? null));
       setStreak(rev.streak.hot);
       setPhase("revealing");
       // Preload the next round during the reveal (errors surface on Next).
