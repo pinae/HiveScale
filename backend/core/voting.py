@@ -36,7 +36,13 @@ def vote_level() -> int:
 
 def unlocks(player) -> dict:
     """Which level-gated contribution features this player has unlocked."""
-    return {"vote": player.level >= vote_level()}
+    # Lazy import keeps this module free of a challenges → voting cycle.
+    from core.challenges import challenge_level
+
+    return {
+        "vote": player.level >= vote_level(),
+        "challenge": player.level >= challenge_level(),
+    }
 
 
 def _active_things() -> list[int]:

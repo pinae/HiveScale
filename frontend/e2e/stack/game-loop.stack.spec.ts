@@ -157,6 +157,23 @@ test.describe("real backend game loop", () => {
     await waitForRound(page);
   });
 
+  test("completes a thing challenge and banks the bonus XP", async ({ page }) => {
+    await page.goto("/");
+    await waitForRound(page);
+    const before = await sessionXp(page);
+
+    await page.getByRole("button", { name: /challenge/i }).click();
+    await page.getByLabel(/your thing/i).fill(`e2e thing ${Date.now() % 100000}`);
+    await page.getByRole("button", { name: /submit for/i }).click();
+
+    await expect(page.getByText(/in the pool for review/i)).toBeVisible();
+    await page.getByRole("button", { name: /back to the game/i }).first().click();
+
+    await waitForRound(page);
+    // The flat challenge bonus (25k) is now folded into the running XP.
+    expect(await sessionXp(page)).toBeGreaterThan(before);
+  });
+
   test("the stats page shows a real archetype and returns to the game", async ({ page }) => {
     await page.goto("/");
     await waitForRound(page);

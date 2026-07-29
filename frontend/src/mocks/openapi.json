@@ -6,6 +6,78 @@
         "description": "Crowd-calibration guessing game — deal, guess, reveal."
     },
     "paths": {
+        "/api/challenge/": {
+            "post": {
+                "operationId": "challenge_create",
+                "description": "Submit a ≤3-word thing for the dealt challenge; banks the bonus.",
+                "tags": [
+                    "challenge"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/challenge/next/": {
+            "get": {
+                "operationId": "challenge_next_retrieve",
+                "description": "Two scales + a signed token: name a thing that maxes the first, mins the second.",
+                "tags": [
+                    "challenge"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/content/scales/": {
             "post": {
                 "operationId": "content_scales_create",

@@ -60,9 +60,10 @@ export default defineConfig({
         DATABASE_URL: "sqlite:///e2e-db.sqlite3",
         DJANGO_SECRET_KEY: "e2e-insecure-key",
         GEMINI_API_KEY: "",
-        // Unlock pairing voting for a fresh player so the flow is e2e-testable
-        // without grinding to level 5.
+        // Unlock the contribution features for a fresh player so the flows are
+        // e2e-testable without grinding to the real levels.
         CONTENT_VOTE_LEVEL: "1",
+        CONTENT_CHALLENGE_LEVEL: "1",
       },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

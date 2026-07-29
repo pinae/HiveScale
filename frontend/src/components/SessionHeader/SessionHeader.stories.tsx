@@ -23,6 +23,7 @@ export const WithActions: Story = {
     onShowStats: () => {},
     onDailyWave: () => {},
     onVote: () => {},
+    onChallenge: () => {},
     onClaim: () => {},
     isClaimed: false,
   },

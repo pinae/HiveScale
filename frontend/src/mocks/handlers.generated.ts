@@ -3,6 +3,10 @@
 import { http, HttpResponse } from "msw";
 
 export const handlers = [
+  http.post("/api/challenge/", () =>
+    HttpResponse.json({})),
+  http.get("/api/challenge/next/", () =>
+    HttpResponse.json({})),
   http.post("/api/content/scales/", () =>
     HttpResponse.json({})),
   http.post("/api/content/things/", () =>

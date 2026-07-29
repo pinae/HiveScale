@@ -395,7 +395,37 @@ body {
 .bsg-session-statsbtn,
 .bsg-session-wavebtn,
 .bsg-session-votebtn,
+.bsg-session-challengebtn,
 .bsg-session-claimbtn { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+
+/* --- ChallengeScreen (thing challenges · level 10+) -------------------- */
+
+.bsg-challenge-screen { display: flex; flex-direction: column; min-height: 100%; }
+.bsg-challenge-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+}
+.bsg-challenge-head-title { margin: 0; font-size: 1.1rem; }
+.bsg-challenge-exit { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+.bsg-challenge-round { display: flex; flex-direction: column; gap: 1.1rem; }
+.bsg-challenge-prompt { margin: 0; text-align: center; line-height: 1.4; }
+.bsg-challenge-scales { display: flex; flex-direction: column; gap: 0.75rem; }
+.bsg-challenge-field { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.85rem; }
+.bsg-challenge-field span { color: var(--bsg-ink-dim); text-transform: uppercase; font-size: 0.65rem; }
+.bsg-challenge-field input {
+  font: inherit;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--bsg-radius);
+  border: 1px solid color-mix(in srgb, var(--bsg-wave) 40%, transparent);
+  background: var(--bsg-bg-raised);
+  color: var(--bsg-ink);
+}
+.bsg-challenge-done { display: flex; flex-direction: column; gap: 1rem; }
+.bsg-challenge-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; }
 
 /* --- VoteScreen (pairing curation · level 5+) -------------------------- */
 

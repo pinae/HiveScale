@@ -149,6 +149,36 @@ export async function fetchVoteCandidate(): Promise<VoteCandidate> {
   return readJson(await fetch("/api/vote/next/"));
 }
 
+/** A dealt thing challenge: two scales to satisfy, plus a signed token. */
+export interface ChallengeDeal {
+  first_scale: { id: number; left: string; right: string };
+  second_scale: { id: number; left: string; right: string };
+  max_words: number;
+  reward_xp: number;
+  challenge_token: string;
+}
+
+/** Result of a completed challenge — the new thing plus the updated profile. */
+export interface ChallengeResult {
+  thing_id: number;
+  text: string;
+  xp_awarded: number;
+  player: { xp: number; level: number; multiplier: number };
+  progress: LevelProgress;
+  unlocks: Unlocks;
+}
+
+export async function fetchChallenge(): Promise<ChallengeDeal> {
+  return readJson(await fetch("/api/challenge/next/"));
+}
+
+export async function submitChallenge(input: {
+  challenge_token: string;
+  text: string;
+}): Promise<ChallengeResult> {
+  return readJson(await jsonPost("/api/challenge/", input));
+}
+
 export async function submitVote(input: {
   thing_id: number;
   scale_id: number;

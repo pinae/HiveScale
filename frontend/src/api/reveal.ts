@@ -46,6 +46,7 @@ export interface LevelProgress {
 /** Level-gated contribution features the player has unlocked. */
 export interface Unlocks {
   vote: boolean;
+  challenge: boolean;
 }
 
 export interface HumanReveal {

@@ -22,7 +22,7 @@ export type Phase = "booting" | "guessing" | "submitting" | "revealing" | "advan
 
 export const DEFAULT_GUESS: GuessValue = { center: 50, widthLeft: 15, widthRight: 15 };
 
-const NO_UNLOCKS: Unlocks = { vote: false };
+const NO_UNLOCKS: Unlocks = { vote: false, challenge: false };
 
 /** Running player progression surfaced in the header (xp/level/multiplier). */
 export interface ProfileState {
@@ -63,6 +63,14 @@ export interface GameLoop {
   retry: () => void;
   /** Fold in the profile returned by a successful account claim (WP-11/12). */
   markClaimed: (profile: Profile) => void;
+  /** Update the running profile from any progression response (e.g. a challenge). */
+  syncProfile: (p: {
+    xp: number;
+    level: number;
+    multiplier?: number;
+    progress?: LevelProgress;
+    unlocks?: Unlocks;
+  }) => void;
 }
 
 export function useGameLoop(): GameLoop {
@@ -119,10 +127,24 @@ export function useGameLoop(): GameLoop {
     }
   }, [applyRound, fail]);
 
-  const markClaimed = useCallback((player: Profile) => {
-    setProfile(profileFrom(player));
-    setIsClaimed(player.is_claimed);
-  }, []);
+  const syncProfile = useCallback(
+    (p: {
+      xp: number;
+      level: number;
+      multiplier?: number;
+      progress?: LevelProgress;
+      unlocks?: Unlocks;
+    }) => setProfile(profileFrom(p, p.progress ?? null, p.unlocks ?? NO_UNLOCKS)),
+    [],
+  );
+
+  const markClaimed = useCallback(
+    (player: Profile) => {
+      syncProfile(player);
+      setIsClaimed(player.is_claimed);
+    },
+    [syncProfile],
+  );
 
   const submit = useCallback(async () => {
     const current = roundRef.current;
@@ -204,5 +226,6 @@ export function useGameLoop(): GameLoop {
     next,
     retry,
     markClaimed,
+    syncProfile,
   };
 }

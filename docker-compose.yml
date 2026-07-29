@@ -32,9 +32,10 @@ services:
       # Dev: graduate to the human baseline after just a few answers so the
       # animated crowd histogram shows up quickly (production default is 15).
       GRADUATION_MIN_ANSWERS: ${GRADUATION_MIN_ANSWERS:-3}
-      # Dev: unlock pairing voting early so the curation flow is reachable
-      # without grinding to level 5 (production default is 5).
+      # Dev: unlock the contribution features early so the flows are reachable
+      # without grinding (production defaults are 5 / 10).
       CONTENT_VOTE_LEVEL: ${CONTENT_VOTE_LEVEL:-2}
+      CONTENT_CHALLENGE_LEVEL: ${CONTENT_CHALLENGE_LEVEL:-3}
     ports:
       - "8000:8000"
     volumes:

@@ -205,7 +205,7 @@ Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP
 drags + the reveal animation, and a real-backend integration suite proving the
 blind-deal guarantee, XP accumulation, the server-side speed floor, keyboard-only
 play, the account-claim flow, Daily-Wave completion + share-to-clipboard, and the
-stats page, pairing voting). Next: wire e2e into CI and **WP-13 (research export)**.
+stats page, pairing voting, thing challenges). Next: wire e2e into CI and **WP-13 (research export)**.
 
 ### Progression & contribution (plan §2.x)
 
@@ -220,8 +220,11 @@ Level gates then unlock contribution:
   vote on a fresh combo promotes it to a real pairing; ≥80% negative votes retire
   an existing one (flagged, never re-suggested); admins can disable voting per
   pairing. In-app `VoteScreen`, gated by a backend `unlocks` flag.
-- **Level 10 — thing challenges** *(todo)*: "describe a thing in ≤3 words that fits
-  the first scale but not the second"; accepted things feed new pairings.
+- **Level 10 — thing challenges** *(done)*: `GET /api/challenge/next/` deals two
+  random scales + a signed token; `POST /api/challenge/` accepts a ≤3-word thing
+  that maxes the first scale and mins the second, files it (DRAFT → LLM sanity
+  check) for the pool, and banks a flat bonus worth ten normal rounds at ×5
+  (25,000 XP). In-app `ChallengeScreen`, gated by the backend `unlocks` flag.
 - **Level 15 — scale requests** *(todo)*: once a day, invent a surprising new scale
   for a random thing, shown its most-popular existing pairings as counter-examples.
 
