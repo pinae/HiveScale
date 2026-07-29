@@ -84,6 +84,9 @@ class Pairing(models.Model):
     )
     n_answers = models.PositiveIntegerField(default=0)
     graduated_at = models.DateTimeField(null=True, blank=True)
+    voting_disabled = models.BooleanField(
+        default=False, help_text="Exclude from the fun/boring vote (admin or auto-flagged)."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -97,6 +100,37 @@ class Pairing(models.Model):
     @property
     def graduated(self) -> bool:
         return self.graduated_at is not None
+
+
+class VoteChoice(models.TextChoices):
+    FUN = "fun"
+    INTERESTING = "interesting"
+    BORING = "boring"
+    WEIRD = "weird"
+
+
+class PairingVote(models.Model):
+    """A player's fun/boring/interesting/weird vote on a thing+scale (plan §2.x).
+
+    Keyed on the *combination*, not a Pairing row, so votes work both for
+    existing pairings and for candidate combinations that don't exist yet.
+    """
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="pairing_votes")
+    thing = models.ForeignKey(Thing, on_delete=models.CASCADE, related_name="pairing_votes")
+    scale = models.ForeignKey(Scale, on_delete=models.CASCADE, related_name="pairing_votes")
+    choice = models.CharField(max_length=12, choices=VoteChoice.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["player", "thing", "scale"], name="one_vote_per_player_and_pairing"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.choice} on {self.thing_id}+{self.scale_id} by {self.player_id}"
 
 
 class Guess(models.Model):

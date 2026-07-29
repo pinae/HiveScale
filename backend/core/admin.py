@@ -58,8 +58,9 @@ class ScaleAdmin(ModerationAdmin):
 
 @admin.register(Pairing)
 class PairingAdmin(admin.ModelAdmin):
-    list_display = ("thing", "scale", "status", "n_answers", "graduated_at")
-    list_filter = ("status",)
+    list_display = ("thing", "scale", "status", "n_answers", "graduated_at", "voting_disabled")
+    list_filter = ("status", "voting_disabled")
+    list_editable = ("voting_disabled",)
     list_select_related = ("thing", "scale")
 
 

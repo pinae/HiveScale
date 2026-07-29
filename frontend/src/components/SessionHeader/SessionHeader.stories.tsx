@@ -19,7 +19,13 @@ export const HotStreak: Story = { args: { streak: 5 } };
 export const FreshPlayer: Story = { args: { xp: 0, level: 1, streak: 0 } };
 
 export const WithActions: Story = {
-  args: { onShowStats: () => {}, onDailyWave: () => {}, onClaim: () => {}, isClaimed: false },
+  args: {
+    onShowStats: () => {},
+    onDailyWave: () => {},
+    onVote: () => {},
+    onClaim: () => {},
+    isClaimed: false,
+  },
 };
 
 export const Claimed: Story = {

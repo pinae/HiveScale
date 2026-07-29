@@ -141,6 +141,22 @@ test.describe("real backend game loop", () => {
     expect(clipboard).toContain("HiveScale");
   });
 
+  test("curates a pairing by voting (unlocked for the e2e player)", async ({ page }) => {
+    await page.goto("/");
+    await waitForRound(page);
+
+    // The e2e backend lowers the vote gate, so the entry is present.
+    await page.getByRole("button", { name: /vote/i }).click();
+
+    // Judge whatever combo is served; the verdict produces an outcome message.
+    await expect(page.getByRole("button", { name: /fun/i })).toBeVisible();
+    await page.getByRole("button", { name: /interesting/i }).click();
+    await expect(page.getByText(/added|retired|vote counted|noted/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /back to the game/i }).click();
+    await waitForRound(page);
+  });
+
   test("the stats page shows a real archetype and returns to the game", async ({ page }) => {
     await page.goto("/");
     await waitForRound(page);

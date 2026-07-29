@@ -3,7 +3,7 @@
  * (`/api/...`), proxied to Django in dev. Responses are typed against the
  * backend contract; non-2xx responses raise {@link ApiError}.
  */
-import type { LevelProgress, RevealPayload } from "./reveal";
+import type { LevelProgress, RevealPayload, Unlocks } from "./reveal";
 
 export interface Round {
   pairing_id: number;
@@ -18,6 +18,7 @@ export interface Profile {
   is_claimed: boolean;
   multiplier?: number;
   progress?: LevelProgress;
+  unlocks?: Unlocks;
 }
 
 export interface Stats {
@@ -126,6 +127,34 @@ export async function submitDailyWaveGuess(input: {
   width_right: number;
 }): Promise<DailyWaveReveal> {
   return readJson(await jsonPost("/api/daily-wave/guess/", input));
+}
+
+export type VoteChoice = "fun" | "interesting" | "boring" | "weird";
+
+/** A thing+scale to judge — a fresh candidate combo or an existing pairing. */
+export interface VoteCandidate {
+  thing: { id: number; text: string };
+  scale: { id: number; left: string; right: string };
+  pairing_id: number | null;
+  existing: boolean;
+}
+
+/** Outcome of a vote: a candidate promoted, retired, or just recorded. */
+export interface VoteResult {
+  outcome: "added" | "noted" | "recorded" | "retired";
+  pairing_id?: number;
+}
+
+export async function fetchVoteCandidate(): Promise<VoteCandidate> {
+  return readJson(await fetch("/api/vote/next/"));
+}
+
+export async function submitVote(input: {
+  thing_id: number;
+  scale_id: number;
+  choice: VoteChoice;
+}): Promise<VoteResult> {
+  return readJson(await jsonPost("/api/vote/", input));
 }
 
 export async function fetchNextRound(): Promise<Round> {

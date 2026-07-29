@@ -394,7 +394,33 @@ body {
 .bsg-session-actions { display: flex; align-items: center; gap: 0.5rem; }
 .bsg-session-statsbtn,
 .bsg-session-wavebtn,
+.bsg-session-votebtn,
 .bsg-session-claimbtn { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+
+/* --- VoteScreen (pairing curation · level 5+) -------------------------- */
+
+.bsg-vote-screen { display: flex; flex-direction: column; min-height: 100%; }
+.bsg-vote-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+}
+.bsg-vote-head-title { margin: 0; font-size: 1.1rem; }
+.bsg-vote-exit { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+.bsg-vote-round { display: flex; flex-direction: column; gap: 1.25rem; }
+.bsg-vote-prompt { margin: 0; text-align: center; color: var(--bsg-ink-dim); }
+.bsg-vote-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.bsg-vote-choice[data-choice="fun"],
+.bsg-vote-choice[data-choice="interesting"] {
+  border-color: color-mix(in srgb, var(--bsg-wave) 55%, transparent);
+}
+.bsg-vote-choice[data-choice="boring"],
+.bsg-vote-choice[data-choice="weird"] {
+  border-color: color-mix(in srgb, var(--bsg-accent) 45%, transparent);
+}
 .bsg-session-saved {
   font-size: 0.8rem;
   font-weight: 700;

@@ -15,12 +15,14 @@ import {
   startSession,
   submitGuess,
 } from "../api/client";
-import type { LevelProgress, RevealPayload } from "../api/reveal";
+import type { LevelProgress, RevealPayload, Unlocks } from "../api/reveal";
 import type { GuessValue } from "../components/WaveSlider";
 
 export type Phase = "booting" | "guessing" | "submitting" | "revealing" | "advancing" | "error";
 
 export const DEFAULT_GUESS: GuessValue = { center: 50, widthLeft: 15, widthRight: 15 };
+
+const NO_UNLOCKS: Unlocks = { vote: false };
 
 /** Running player progression surfaced in the header (xp/level/multiplier). */
 export interface ProfileState {
@@ -28,14 +30,22 @@ export interface ProfileState {
   level: number;
   multiplier: number;
   progress: LevelProgress | null;
+  unlocks: Unlocks;
 }
 
 type FailedAction = "boot" | "submit" | "next";
 
 const profileFrom = (
-  p: { xp: number; level: number; multiplier?: number; progress?: LevelProgress },
+  p: { xp: number; level: number; multiplier?: number; progress?: LevelProgress; unlocks?: Unlocks },
   progress: LevelProgress | null = p.progress ?? null,
-): ProfileState => ({ xp: p.xp, level: p.level, multiplier: p.multiplier ?? 1, progress });
+  unlocks: Unlocks = p.unlocks ?? NO_UNLOCKS,
+): ProfileState => ({
+  xp: p.xp,
+  level: p.level,
+  multiplier: p.multiplier ?? 1,
+  progress,
+  unlocks,
+});
 
 export interface GameLoop {
   phase: Phase;
@@ -66,6 +76,7 @@ export function useGameLoop(): GameLoop {
     level: 1,
     multiplier: 1,
     progress: null,
+    unlocks: NO_UNLOCKS,
   });
   const [streak, setStreak] = useState(0);
   const [isClaimed, setIsClaimed] = useState(false);
@@ -128,7 +139,7 @@ export function useGameLoop(): GameLoop {
       });
       setReveal(rev);
       setSubmittedGuess(g);
-      setProfile(profileFrom(rev.player, rev.progress ?? null));
+      setProfile(profileFrom(rev.player, rev.progress ?? null, rev.unlocks ?? NO_UNLOCKS));
       setStreak(rev.streak.hot);
       setPhase("revealing");
       // Preload the next round during the reveal (errors surface on Next).

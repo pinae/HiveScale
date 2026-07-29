@@ -36,7 +36,7 @@ from bglib.scoring import (
     visible_score,
 )
 from bglib.scoring import Guess as GuessValue
-from core import leveling
+from core import leveling, voting
 from core.models import Guess, Pairing, RoundScore
 from core.scheduler import NoPairingAvailable, deal, serialize_deal
 from core.services import SPEED_FLOOR_MS, eligible_guesses, recompute_snapshot
@@ -250,6 +250,7 @@ def score_and_record(player, pairing: Pairing, value: GuessValue, response_ms: i
         "multiplier": player.xp_multiplier,
     }
     body["progress"] = leveling.level_progress(player.xp)
+    body["unlocks"] = voting.unlocks(player)
     return body, guess
 
 

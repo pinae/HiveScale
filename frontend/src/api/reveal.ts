@@ -43,6 +43,11 @@ export interface LevelProgress {
   next_level_xp: number;
 }
 
+/** Level-gated contribution features the player has unlocked. */
+export interface Unlocks {
+  vote: boolean;
+}
+
 export interface HumanReveal {
   source: "human";
   counted: boolean;
@@ -53,6 +58,7 @@ export interface HumanReveal {
   streak: { hot: number; daily?: number };
   player: PlayerState;
   progress?: LevelProgress;
+  unlocks?: Unlocks;
 }
 
 export interface PioneerReveal {
@@ -63,6 +69,7 @@ export interface PioneerReveal {
   streak: { hot: number; daily?: number };
   player: PlayerState;
   progress?: LevelProgress;
+  unlocks?: Unlocks;
 }
 
 export type RevealPayload = HumanReveal | PioneerReveal;

@@ -205,6 +205,27 @@ Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP
 drags + the reveal animation, and a real-backend integration suite proving the
 blind-deal guarantee, XP accumulation, the server-side speed floor, keyboard-only
 play, the account-claim flow, Daily-Wave completion + share-to-clipboard, and the
-stats page). Next: wire e2e into CI and **WP-13 (research export)**.
+stats page, pairing voting). Next: wire e2e into CI and **WP-13 (research export)**.
 
-Partial in WP-11 (APIs/services + tests done; wider UI still to come): content submission has the gated API + moderation queue but not yet an in-app submission form. Both previously-deferred WP-12 scenarios — account-claim-after-reveal and Daily-Wave share-to-clipboard — are now implemented and covered end to end.
+### Progression & contribution (plan §2.x)
+
+A real leveling curve now drives everything: XP → level via a sharply-widening
+curve (`core/leveling.py`), and a calibration **XP multiplier** (×1–×10) that
+climbs on ≥70%-covered graduated rounds, is neutral on bimodal rounds, and resets
+on a poor one — so reaching level 5 needs sustained calibration, not just volume.
+Level gates then unlock contribution:
+
+- **Level 5 — pairing voting** *(done)*: `GET /api/vote/next/` + `POST /api/vote/`
+  serve a thing+scale to judge (fun / interesting / boring / weird). A positive
+  vote on a fresh combo promotes it to a real pairing; ≥80% negative votes retire
+  an existing one (flagged, never re-suggested); admins can disable voting per
+  pairing. In-app `VoteScreen`, gated by a backend `unlocks` flag.
+- **Level 10 — thing challenges** *(todo)*: "describe a thing in ≤3 words that fits
+  the first scale but not the second"; accepted things feed new pairings.
+- **Level 15 — scale requests** *(todo)*: once a day, invent a surprising new scale
+  for a random thing, shown its most-popular existing pairings as counter-examples.
+
+Partial in WP-11 (APIs/services + tests done; wider UI still to come): direct
+Thing/Scale submission has the gated API + moderation queue but not yet an in-app
+form. Both previously-deferred WP-12 scenarios — account-claim-after-reveal and
+Daily-Wave share-to-clipboard — are implemented and covered end to end.

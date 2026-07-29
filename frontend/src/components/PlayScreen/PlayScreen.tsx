@@ -12,6 +12,7 @@ import { useState } from "react";
 import ClaimPanel from "../ClaimPanel";
 import DailyWaveScreen from "../DailyWaveScreen";
 import RevealWave from "../RevealWave";
+import VoteScreen from "../VoteScreen";
 import ScaleHeader from "../ScaleHeader";
 import SessionHeader from "../SessionHeader";
 import StatsPanel from "../StatsPanel";
@@ -34,6 +35,7 @@ export default function PlayScreen({ className }: PlayScreenProps) {
   const [statsError, setStatsError] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
   const [showDailyWave, setShowDailyWave] = useState(false);
+  const [showVote, setShowVote] = useState(false);
 
   // A claim magic link (?claim=…) confirms itself on load and folds in the
   // resulting profile; its notice is surfaced above the game.
@@ -56,6 +58,14 @@ export default function PlayScreen({ className }: PlayScreenProps) {
     return (
       <div className={rootClass}>
         <DailyWaveScreen onExit={() => setShowDailyWave(false)} />
+      </div>
+    );
+  }
+
+  if (showVote) {
+    return (
+      <div className={rootClass}>
+        <VoteScreen onExit={() => setShowVote(false)} />
       </div>
     );
   }
@@ -125,6 +135,7 @@ export default function PlayScreen({ className }: PlayScreenProps) {
         progress={profile.progress}
         onShowStats={openStats}
         onDailyWave={() => setShowDailyWave(true)}
+        onVote={profile.unlocks.vote ? () => setShowVote(true) : undefined}
         onClaim={() => setShowClaim(true)}
         isClaimed={loop.isClaimed}
       />

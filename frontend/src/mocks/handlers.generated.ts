@@ -83,4 +83,8 @@ export const handlers = [
     HttpResponse.json({})),
   http.post("/api/session/claim/request/", () =>
     HttpResponse.json({})),
+  http.post("/api/vote/", () =>
+    HttpResponse.json({})),
+  http.get("/api/vote/next/", () =>
+    HttpResponse.json({})),
 ];

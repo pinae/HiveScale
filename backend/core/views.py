@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from core import leveling
+from core import leveling, voting
 from core.archetypes import calibration_summary, classify
 from core.models import Player
 from core.services import claim_player
@@ -30,6 +30,7 @@ def _profile(player: Player) -> dict:
         "xp": player.xp,
         "multiplier": player.xp_multiplier,
         "progress": leveling.level_progress(player.xp),
+        "unlocks": voting.unlocks(player),
         "is_claimed": player.user_id is not None,
     }
 
