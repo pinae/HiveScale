@@ -124,7 +124,7 @@ CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 # Gemini cold-start worker (WP-07). The key is absent in dev/CI; the worker is
 # always faked in tests and the one real-API test is @external (run manually).
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
 
 # Player level required to unlock Thing/Scale submission (WP-11, plan §1.6).
 CONTENT_SUGGEST_LEVEL = int(os.environ.get("CONTENT_SUGGEST_LEVEL", "10"))
