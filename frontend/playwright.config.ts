@@ -64,6 +64,8 @@ export default defineConfig({
         // e2e-testable without grinding to the real levels.
         CONTENT_VOTE_LEVEL: "1",
         CONTENT_CHALLENGE_LEVEL: "1",
+        CONTENT_SCALE_LEVEL: "1",
+        CONTENT_SCALE_MIN_ROUNDS: "0",
       },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

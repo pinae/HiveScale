@@ -22,7 +22,7 @@ export type Phase = "booting" | "guessing" | "submitting" | "revealing" | "advan
 
 export const DEFAULT_GUESS: GuessValue = { center: 50, widthLeft: 15, widthRight: 15 };
 
-const NO_UNLOCKS: Unlocks = { vote: false, challenge: false };
+const NO_UNLOCKS: Unlocks = { vote: false, challenge: false, scale: false };
 
 /** Running player progression surfaced in the header (xp/level/multiplier). */
 export interface ProfileState {

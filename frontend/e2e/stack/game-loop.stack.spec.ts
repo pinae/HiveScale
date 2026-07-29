@@ -174,6 +174,22 @@ test.describe("real backend game loop", () => {
     expect(await sessionXp(page)).toBeGreaterThan(before);
   });
 
+  test("crafts a player-made scale (level-15 request, unlocked for the e2e player)", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await waitForRound(page);
+
+    await page.getByRole("button", { name: /📐 scale/i }).click();
+    await page.getByLabel(/one pole/i).fill("cosmic");
+    await page.getByLabel(/the other pole/i).fill(`mundane ${Date.now() % 100000}`);
+    await page.getByRole("button", { name: /file my scale/i }).click();
+
+    await expect(page.getByText(/enters play once approved/i)).toBeVisible();
+    await page.getByRole("button", { name: /back to the game/i }).first().click();
+    await waitForRound(page);
+  });
+
   test("the stats page shows a real archetype and returns to the game", async ({ page }) => {
     await page.goto("/");
     await waitForRound(page);

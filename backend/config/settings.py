@@ -133,6 +133,9 @@ CONTENT_SUGGEST_LEVEL = int(os.environ.get("CONTENT_SUGGEST_LEVEL", "10"))
 # lower these so the flows are reachable without grinding to the real levels.
 CONTENT_VOTE_LEVEL = int(os.environ.get("CONTENT_VOTE_LEVEL", "5"))
 CONTENT_CHALLENGE_LEVEL = int(os.environ.get("CONTENT_CHALLENGE_LEVEL", "10"))
+CONTENT_SCALE_LEVEL = int(os.environ.get("CONTENT_SCALE_LEVEL", "15"))
+# Rounds a player must play on a day before that day's scale request is offered.
+CONTENT_SCALE_MIN_ROUNDS = int(os.environ.get("CONTENT_SCALE_MIN_ROUNDS", "5"))
 
 # Eligible answers before a pairing graduates to the human baseline (plan §1.5).
 # Production is 15; the dev stack lowers it so the crowd histogram appears fast.

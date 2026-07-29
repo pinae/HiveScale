@@ -415,6 +415,78 @@
                 }
             }
         },
+        "/api/scale-request/": {
+            "get": {
+                "operationId": "scale_request_retrieve",
+                "description": "Today's scale prompt, or why it isn't available yet.",
+                "tags": [
+                    "scale-request"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/scale-request/submit/": {
+            "post": {
+                "operationId": "scale_request_submit_create",
+                "description": "File a new surprising scale for the prompted thing.",
+                "tags": [
+                    "scale-request"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/session/": {
             "post": {
                 "operationId": "session_create",

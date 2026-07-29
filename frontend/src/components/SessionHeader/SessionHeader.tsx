@@ -21,6 +21,8 @@ export interface SessionHeaderProps {
   onVote?: () => void;
   /** When provided (level 10+ unlock), renders the thing-challenge entry. */
   onChallenge?: () => void;
+  /** When provided (level 15+ unlock), renders the scale-request entry. */
+  onScaleRequest?: () => void;
   /** When provided and the session isn't claimed, offers to save progress. */
   onClaim?: () => void;
   /** Whether the session is already tied to an account (WP-11). */
@@ -37,6 +39,7 @@ export default function SessionHeader({
   onDailyWave,
   onVote,
   onChallenge,
+  onScaleRequest,
   onClaim,
   isClaimed = false,
 }: SessionHeaderProps) {
@@ -95,6 +98,11 @@ export default function SessionHeader({
         {onChallenge ? (
           <button type="button" className="bsg-btn bsg-session-challengebtn" onClick={onChallenge}>
             🧩 Challenge
+          </button>
+        ) : null}
+        {onScaleRequest ? (
+          <button type="button" className="bsg-btn bsg-session-scalebtn" onClick={onScaleRequest}>
+            📐 Scale
           </button>
         ) : null}
         {onShowStats ? (

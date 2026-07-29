@@ -35,6 +35,9 @@ class Player(models.Model):
     hot_streak = models.PositiveIntegerField(default=0, help_text="Consecutive good rounds.")
     daily_streak = models.PositiveIntegerField(default=0, help_text="Consecutive days played.")
     last_played_on = models.DateField(null=True, blank=True)
+    last_scale_request_on = models.DateField(
+        null=True, blank=True, help_text="Day of the player's last scale request (once/day)."
+    )
     streak_freezes = models.PositiveIntegerField(default=0, help_text="Missed-day protections.")
     calibration_stats = models.JSONField(default=dict, blank=True)
     weight = models.FloatField(default=1.0, help_text="Baseline weight; 0 excludes silently.")

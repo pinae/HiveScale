@@ -36,6 +36,8 @@ services:
       # without grinding (production defaults are 5 / 10).
       CONTENT_VOTE_LEVEL: ${CONTENT_VOTE_LEVEL:-2}
       CONTENT_CHALLENGE_LEVEL: ${CONTENT_CHALLENGE_LEVEL:-3}
+      CONTENT_SCALE_LEVEL: ${CONTENT_SCALE_LEVEL:-4}
+      CONTENT_SCALE_MIN_ROUNDS: ${CONTENT_SCALE_MIN_ROUNDS:-2}
     ports:
       - "8000:8000"
     volumes:

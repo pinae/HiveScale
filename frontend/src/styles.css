@@ -396,7 +396,44 @@ body {
 .bsg-session-wavebtn,
 .bsg-session-votebtn,
 .bsg-session-challengebtn,
+.bsg-session-scalebtn,
 .bsg-session-claimbtn { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+
+/* --- ScaleRequestScreen (player scales · level 15+) ------------------- */
+
+.bsg-scalereq-screen { display: flex; flex-direction: column; min-height: 100%; }
+.bsg-scalereq-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+}
+.bsg-scalereq-head-title { margin: 0; font-size: 1.1rem; }
+.bsg-scalereq-exit { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+.bsg-scalereq-round { display: flex; flex-direction: column; gap: 1rem; }
+.bsg-scalereq-prompt { margin: 0; text-align: center; }
+.bsg-scalereq-examples {
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--bsg-radius);
+  background: var(--bsg-bg-raised);
+  font-size: 0.85rem;
+}
+.bsg-scalereq-examples-title { margin: 0 0 0.35rem; color: var(--bsg-ink-dim); }
+.bsg-scalereq-examples ul { margin: 0; padding-left: 1.1rem; }
+.bsg-scalereq-poles { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.bsg-scalereq-field { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.85rem; }
+.bsg-scalereq-field span { color: var(--bsg-ink-dim); text-transform: uppercase; font-size: 0.65rem; }
+.bsg-scalereq-field input {
+  font: inherit;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--bsg-radius);
+  border: 1px solid color-mix(in srgb, var(--bsg-wave) 40%, transparent);
+  background: var(--bsg-bg-raised);
+  color: var(--bsg-ink);
+}
+.bsg-scalereq-done { display: flex; flex-direction: column; gap: 1rem; align-items: center; }
 
 /* --- ChallengeScreen (thing challenges · level 10+) -------------------- */
 

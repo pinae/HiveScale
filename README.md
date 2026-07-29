@@ -78,6 +78,65 @@ yarn e2e                       # Playwright end-to-end suites (WP-12)
 > peer declarations. `.yarnrc.yml` fixes these via `packageExtensions`, so a fresh
 > `yarn install` completes with zero warnings — keep it that way when adding deps.
 
+## Progression: how XP, multipliers, and levels work
+
+The whole progression lives in `backend/core/leveling.py` (curve + multiplier
+rules) and is applied centrally in `round_api.score_and_record`, so the round loop
+and the Daily Wave award XP identically. All thresholds are tunable and the dev /
+e2e stacks lower the level gates so the flows are reachable without grinding.
+
+### Earning XP
+
+XP is banked only on **counted** rounds (a guess slower than the 1.5 s speed floor;
+too-fast rounds still reveal but earn nothing). Per round:
+
+```
+XP gained = round(visible_score × effective_multiplier)
+```
+
+- **`visible_score`** is the round's 0–1000 score (distance to the crowd median +
+  interval calibration), or a flat **550 pioneer bonus** on an ungraduated pairing.
+- **`effective_multiplier`** is the player's current multiplier — but **×1 until
+  level 2**, so brand-new players always earn face value.
+- **Thing challenges** (level 10) pay a flat **25,000 XP** — ten normal rounds at a
+  ×5 multiplier — on top of the round loop. Pairing votes and scale requests are
+  curation, not scored, so they grant no XP.
+
+### The calibration multiplier (×1 → ×10)
+
+From level 2 the multiplier rewards *calibrated* guessing rather than volume. After
+each **graduated** ("human") round:
+
+| Round outcome | Effect on the multiplier |
+| --- | --- |
+| Interval covers **≥ 70%** of the crowd | **+1** (capped at ×10) |
+| Interval covers **< 70%** | **resets to ×1** |
+| Crowd is **bimodal** ("society at war") | **unchanged** (neutral) |
+| Pioneer round / too-fast | **unchanged** |
+
+Because XP = score × multiplier, a long chain of well-calibrated rounds is worth
+far more than the same number of sloppy ones — the intended path to level 5.
+
+### The level curve
+
+Cumulative XP per level widens sharply (`LEVEL_THRESHOLDS`). The L4→L5 jump
+(40k → 500k) is the deliberate wall: at ~50 rounds/day and ×1 that's ~20 days, so
+reaching level 5 inside a fortnight *requires* sustaining a high multiplier.
+
+### What each level unlocks
+
+| Level | Unlock |
+| --- | --- |
+| **1** | Normal play (deal → guess → reveal), Daily Wave, streaks, account claim |
+| **2** | The calibration **XP multiplier** starts accruing (×1 → ×10) |
+| **5** | **Pairing voting** — curate fun/interesting/boring/weird combos |
+| **10** | **Thing challenges** — invent a ≤3-word thing (flat 25,000 XP reward) |
+| **15** | **Scale requests** — craft a surprising new scale, once a day |
+
+The backend reports these as an `unlocks` object on the session/reveal payloads,
+so the front end gates each feature by what the server actually allows (letting the
+dev/e2e stacks unlock features early just by lowering a threshold).
+
 ## Session API (WP-04) — curl demo
 
 Anonymous identity is a signed, httpOnly cookie; the raw device token never
@@ -205,7 +264,7 @@ Implemented so far: **WP-01** (skeleton & CI), **WP-02** (`bglib.scoring`), **WP
 drags + the reveal animation, and a real-backend integration suite proving the
 blind-deal guarantee, XP accumulation, the server-side speed floor, keyboard-only
 play, the account-claim flow, Daily-Wave completion + share-to-clipboard, and the
-stats page, pairing voting, thing challenges). Next: wire e2e into CI and **WP-13 (research export)**.
+stats page, pairing voting, thing challenges, scale requests). Next: wire e2e into CI and **WP-13 (research export)**.
 
 ### Progression & contribution (plan §2.x)
 
@@ -225,8 +284,12 @@ Level gates then unlock contribution:
   that maxes the first scale and mins the second, files it (DRAFT → LLM sanity
   check) for the pool, and banks a flat bonus worth ten normal rounds at ×5
   (25,000 XP). In-app `ChallengeScreen`, gated by the backend `unlocks` flag.
-- **Level 15 — scale requests** *(todo)*: once a day, invent a surprising new scale
-  for a random thing, shown its most-popular existing pairings as counter-examples.
+- **Level 15 — scale requests** *(done)*: once a day (and only after a few rounds),
+  `GET /api/scale-request/` picks a random thing and lists its most-popular existing
+  scales as "already taken"; `POST /api/scale-request/submit/` files the player's
+  surprising new scale (DRAFT → sanity check) and pairs it with the thing. In-app
+  `ScaleRequestScreen`, gated by the backend `unlocks` flag plus the daily/rounds
+  availability check.
 
 Partial in WP-11 (APIs/services + tests done; wider UI still to come): direct
 Thing/Scale submission has the gated API + moderation queue but not yet an in-app

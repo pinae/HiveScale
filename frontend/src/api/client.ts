@@ -179,6 +179,34 @@ export async function submitChallenge(input: {
   return readJson(await jsonPost("/api/challenge/", input));
 }
 
+/** Today's scale prompt (or why it isn't available yet). */
+export interface ScaleRequestState {
+  available: boolean;
+  reason?: string;
+  thing?: { id: number; text: string };
+  examples?: { left: string; right: string }[];
+  scale_request_token?: string;
+}
+
+export interface ScaleRequestResult {
+  scale_id: number;
+  left: string;
+  right: string;
+  pairing_id: number;
+}
+
+export async function fetchScaleRequest(): Promise<ScaleRequestState> {
+  return readJson(await fetch("/api/scale-request/"));
+}
+
+export async function submitScaleRequest(input: {
+  scale_request_token: string;
+  left: string;
+  right: string;
+}): Promise<ScaleRequestResult> {
+  return readJson(await jsonPost("/api/scale-request/submit/", input));
+}
+
 export async function submitVote(input: {
   thing_id: number;
   scale_id: number;

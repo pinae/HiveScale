@@ -47,6 +47,7 @@ export interface LevelProgress {
 export interface Unlocks {
   vote: boolean;
   challenge: boolean;
+  scale: boolean;
 }
 
 export interface HumanReveal {

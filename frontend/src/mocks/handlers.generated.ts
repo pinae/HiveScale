@@ -81,6 +81,10 @@ export const handlers = [
         "right": "overly complicated"
       }
     })),
+  http.get("/api/scale-request/", () =>
+    HttpResponse.json({})),
+  http.post("/api/scale-request/submit/", () =>
+    HttpResponse.json({})),
   http.post("/api/session/", () =>
     HttpResponse.json({})),
   http.post("/api/session/claim/confirm/", () =>

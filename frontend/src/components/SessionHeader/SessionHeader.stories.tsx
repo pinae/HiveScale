@@ -24,6 +24,7 @@ export const WithActions: Story = {
     onDailyWave: () => {},
     onVote: () => {},
     onChallenge: () => {},
+    onScaleRequest: () => {},
     onClaim: () => {},
     isClaimed: false,
   },
