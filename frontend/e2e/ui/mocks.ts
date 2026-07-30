@@ -51,7 +51,9 @@ export async function mockGameLoop(page: Page): Promise<void> {
     route.fulfill({ json: { player: { level: 1, xp: 0, is_claimed: false }, created: true } }),
   );
 
-  await page.route("**/api/round/next/", (route) =>
+  // Regex, not a glob: the client appends a `?exclude=…` recently-seen list on
+  // later deals, which a trailing-slash glob would fail to match.
+  await page.route(/\/api\/round\/next\//, (route) =>
     route.fulfill({ json: guessed ? roundB : roundA }),
   );
 

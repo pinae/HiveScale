@@ -27,6 +27,9 @@ const NO_UNLOCKS: Unlocks = { daily_wave: false, vote: false, challenge: false, 
 /** Levels that unlock a new capability and get an explainer card. */
 export const MILESTONE_LEVELS = [2, 3, 5, 10, 15];
 
+/** How many recently-dealt pairings the client remembers to avoid quick repeats. */
+export const SEEN_WINDOW = 50;
+
 /** Running player progression surfaced in the header (xp/level/multiplier). */
 export interface ProfileState {
   xp: number;
@@ -102,6 +105,15 @@ export function useGameLoop(): GameLoop {
   const preloaded = useRef<Round | null>(null);
   const failedAction = useRef<FailedAction | null>(null);
   const lastLevelRef = useRef(1);
+  // Recently-dealt pairing ids, newest first, sent to the backend so it can skip
+  // them without tracking per-player history (see fetchNextRound / scheduler).
+  const seenRef = useRef<number[]>([]);
+  const rememberSeen = useCallback((pairingId: number) => {
+    seenRef.current = [pairingId, ...seenRef.current.filter((id) => id !== pairingId)].slice(
+      0,
+      SEEN_WINDOW,
+    );
+  }, []);
   useEffect(() => {
     guessRef.current = guess;
     roundRef.current = round;
@@ -129,14 +141,18 @@ export function useGameLoop(): GameLoop {
     setPhase("error");
   }, []);
 
-  const applyRound = useCallback((r: Round) => {
-    setRound(r);
-    setReveal(null);
-    setSubmittedGuess(null);
-    setGuess(DEFAULT_GUESS);
-    setError(null);
-    setPhase("guessing");
-  }, []);
+  const applyRound = useCallback(
+    (r: Round) => {
+      rememberSeen(r.pairing_id);
+      setRound(r);
+      setReveal(null);
+      setSubmittedGuess(null);
+      setGuess(DEFAULT_GUESS);
+      setError(null);
+      setPhase("guessing");
+    },
+    [rememberSeen],
+  );
 
   // Starts at the initial "booting" phase; retry() re-enters it explicitly.
   const boot = useCallback(async () => {
@@ -145,7 +161,7 @@ export function useGameLoop(): GameLoop {
       // A returning (claimed) player arrives with real xp/level and a claim flag.
       applyProfile(profileFrom(player), false);
       setIsClaimed(player.is_claimed);
-      applyRound(await fetchNextRound());
+      applyRound(await fetchNextRound({ exclude: seenRef.current }));
     } catch {
       fail("boot", "Couldn't reach the game. Check your connection.");
     }
@@ -192,7 +208,7 @@ export function useGameLoop(): GameLoop {
       setPhase("revealing");
       // Preload the next round during the reveal (errors surface on Next).
       preloaded.current = null;
-      fetchNextRound()
+      fetchNextRound({ exclude: seenRef.current })
         .then((r) => {
           preloaded.current = r;
         })
@@ -214,7 +230,7 @@ export function useGameLoop(): GameLoop {
     setPhase("advancing");
     setError(null);
     try {
-      applyRound(await fetchNextRound());
+      applyRound(await fetchNextRound({ exclude: seenRef.current }));
     } catch {
       fail("next", "Couldn't load the next round.");
     }

@@ -107,6 +107,28 @@ def test_next_with_an_empty_database_is_a_clean_404() -> None:
     assert client.get(NEXT_URL).status_code == status.HTTP_404_NOT_FOUND
 
 
+def test_next_honors_the_client_exclude_list() -> None:
+    # The frontend passes its recently-seen ids so the backend skips them.
+    keep = _graduated_pairing()
+    skip = _make_pairing(2)
+    client = APIClient()
+    _session(client)
+    seen = {
+        client.get(NEXT_URL, {"exclude": str(skip.pk)}).json()["pairing_id"]
+        for _ in range(30)
+    }
+    assert seen == {keep.pk}
+
+
+def test_next_ignores_junk_in_the_exclude_list() -> None:
+    keep = _graduated_pairing()
+    client = APIClient()
+    _session(client)
+    # Non-numeric junk is dropped rather than erroring; the deal still succeeds.
+    body = client.get(NEXT_URL, {"exclude": "abc,,99999999,"}).json()
+    assert body["pairing_id"] == keep.pk
+
+
 # --- Submission guards ------------------------------------------------------
 
 

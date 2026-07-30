@@ -23,6 +23,7 @@ from django.utils import timezone
 from core.models import ContentStatus, Guess, Pairing, Player, Scale, Thing
 from core.scheduler import (
     CATEGORY_WEIGHTS,
+    EXPLORE_SHARE,
     SESSION_WINDOW,
     NoPairingAvailable,
     deal,
@@ -123,6 +124,68 @@ def test_category_falls_back_when_its_bucket_is_empty(player: Player) -> None:
     only_graduated = _make_pairing(1, n_answers=30, graduated=True)
     fresh_roll = 1.0 - 1e-9  # would pick the (empty) fresh bucket
     assert deal(player, rng=ScriptedRng(fresh_roll)).pk == only_graduated.pk
+
+
+# ---------------------------------------------------------------------------
+# Curated / explore / rotate modes (the live round-loop policy)
+# ---------------------------------------------------------------------------
+
+
+def test_curated_mode_prefers_graduated_pairings(player: Player) -> None:
+    fresh = _make_pairing(1)
+    grad = _make_pairing(2, n_answers=30, graduated=True)
+    rng = random.Random(0)
+    dealt = {deal(player, rng=rng, mode="curated").pk for _ in range(50)}
+    assert dealt == {grad.pk}  # never the fresh one while a baseline exists
+    assert fresh.pk not in dealt
+
+
+def test_curated_mode_pushes_the_under_sampled_closest_to_graduating(player: Player) -> None:
+    # No graduated pairings yet: the one nearest the threshold (most answers) is
+    # favored so it crosses the line. ScriptedRng picks the first candidate, and
+    # curated orders under-sampled ids by -n_answers.
+    _make_pairing(1, n_answers=1)
+    high = _make_pairing(2, n_answers=20)
+    assert deal(player, rng=ScriptedRng(0.9), mode="curated").pk == high.pk
+
+
+def test_curated_mode_falls_back_to_fresh_when_nothing_is_sampled(player: Player) -> None:
+    only_fresh = _make_pairing(1)
+    assert deal(player, rng=random.Random(0), mode="curated").pk == only_fresh.pk
+
+
+def test_explore_mode_draws_from_the_whole_pool(player: Player) -> None:
+    fresh = {_make_pairing(i).pk for i in range(3)}
+    grad = {_make_pairing(i, n_answers=30, graduated=True).pk for i in range(10, 13)}
+    rng = random.Random(1)
+    dealt = {deal(player, rng=rng, mode="explore").pk for _ in range(200)}
+    assert dealt & fresh  # data-poor pairings still get exposure...
+    assert dealt & grad  # ...alongside the graduated ones
+
+
+def test_rotate_rolls_curated_or_explore_from_the_rng(player: Player) -> None:
+    # Fresh id < graduated id, so explore (ScriptedRng picks the first id) lands on
+    # the fresh pairing while curated lands on the graduated one.
+    fresh = _make_pairing(1)
+    grad = _make_pairing(2, n_answers=30, graduated=True)
+    assert deal(player, rng=ScriptedRng(EXPLORE_SHARE - 0.01), mode="rotate").pk == fresh.pk
+    assert deal(player, rng=ScriptedRng(EXPLORE_SHARE + 0.01), mode="rotate").pk == grad.pk
+
+
+def test_modes_respect_explicit_exclusions(player: Player) -> None:
+    grad_a = _make_pairing(1, n_answers=30, graduated=True)
+    grad_b = _make_pairing(2, n_answers=30, graduated=True)
+    rng = random.Random(2)
+    curated = {
+        deal(player, rng=rng, exclude_pairing_ids=[grad_a.pk], mode="curated").pk
+        for _ in range(50)
+    }
+    explore = {
+        deal(player, rng=rng, exclude_pairing_ids=[grad_a.pk], mode="explore").pk
+        for _ in range(50)
+    }
+    assert grad_a.pk not in curated and grad_a.pk not in explore
+    assert curated == {grad_b.pk}
 
 
 # ---------------------------------------------------------------------------

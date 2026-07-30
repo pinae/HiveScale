@@ -77,6 +77,27 @@ def _bad_request(detail: str) -> Response:
     return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
 
 
+#: Cap on client-supplied recently-seen ids (the frontend sends its last ~50).
+MAX_EXCLUDE_IDS = 50
+
+
+def _parse_exclude(raw: str) -> list[int]:
+    """Parse the client's ``?exclude=1,2,3`` recently-seen list, defensively.
+
+    The frontend tracks the last ~50 dealt pairings in memory and passes them so
+    the backend needn't store per-player history. Non-numeric junk is ignored and
+    the list is capped so a bloated request can't exclude the whole pool.
+    """
+    ids: list[int] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if part.isdigit():
+            ids.append(int(part))
+            if len(ids) >= MAX_EXCLUDE_IDS:
+                break
+    return ids
+
+
 @extend_schema(
     responses={200: OpenApiTypes.OBJECT},
     examples=[
@@ -98,8 +119,11 @@ def next_round(request) -> Response:
     player = resolve_player(request)
     if player is None:
         return _unauthorized()
+    exclude = _parse_exclude(request.query_params.get("exclude", ""))
     try:
-        pairing = deal(player)
+        # The live loop rotates curated/explore deals so the game stays fun while
+        # a large, mostly-unsampled pool graduates (see core.scheduler).
+        pairing = deal(player, exclude_pairing_ids=exclude, mode="rotate")
     except NoPairingAvailable:
         return Response(
             {"detail": "No pairings available."}, status=status.HTTP_404_NOT_FOUND

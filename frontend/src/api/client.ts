@@ -215,8 +215,18 @@ export async function submitVote(input: {
   return readJson(await jsonPost("/api/vote/", input));
 }
 
-export async function fetchNextRound(): Promise<Round> {
-  return readJson(await fetch("/api/round/next/"));
+/**
+ * Deal the next round. `exclude` is the client's recently-seen pairing ids
+ * (the last ~50, tracked in memory) so the backend can skip them without
+ * storing per-player history — see the round scheduler.
+ */
+export async function fetchNextRound(opts: { exclude?: number[] } = {}): Promise<Round> {
+  const params = new URLSearchParams();
+  if (opts.exclude && opts.exclude.length > 0) {
+    params.set("exclude", opts.exclude.join(","));
+  }
+  const query = params.toString();
+  return readJson(await fetch(`/api/round/next/${query ? `?${query}` : ""}`));
 }
 
 export async function fetchStats(): Promise<Stats> {
