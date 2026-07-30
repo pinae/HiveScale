@@ -258,9 +258,9 @@ Each package is sized for a junior developer or an AI agent working ~1–3 days,
 6. A11y: keyboard-only full round; axe checks on loop + stats pages.
 **Accept:** suite < 5 min in CI, retries only on tagged flaky network steps, trace artifacts uploaded on failure.
 
-### WP-13 · Research export & AI-divergence dashboard *(after WP-07, 11; optional stretch)*
-**Goal:** management command exporting the dataset (pairings, snapshots, AI distributions, divergence metrics) as versioned Parquet; simple staff dashboard listing top AI-vs-human divergences ("AI blind spots").
-**TDD:** export schema snapshot test; divergence metrics validated against hand-computed fixtures; export excludes flagged/zero-weight guesses and all PII.
+### WP-13 · Research export & statistics dashboard *(after WP-07, 11; optional stretch)*
+**Goal:** `export_dataset` management command writing the dataset as versioned CSV/JSON (optional Parquet) — the headline artifact is the **named-dimension embedding matrix** (Things × Scales of crowd medians), plus per-pairing stats (median, IQR, spread, bimodality, AI divergence), scale correlations, histograms, and a dataset card. A read-only **Research statistics** admin page renders, as inline SVG (no matplotlib/JS): a scale-correlation heatmap, tightest distributions (society agrees), "society is at war" (bimodal) pairings, and AI blind spots (LLM prior vs. crowd). Each `DistributionSnapshot` shows its shape and an inline distribution chart.
+**TDD:** export schema test; correlation/divergence metrics validated against hand-computed fixtures; export is aggregate-only — excludes flagged/zero-weight guesses and all PII; admin dashboard renders (populated and empty).
 **Accept:** dataset card (README) documenting fields, licensing intent, and known biases.
 
 ### Dependency graph

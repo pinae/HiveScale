@@ -1,0 +1,53 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div style="max-width: 1100px;">
+  {% if not rows %}
+    <p>No pairings have graduated yet (need enough eligible answers). Play more
+       rounds — the statistics appear once pairings build a crowd baseline.</p>
+  {% else %}
+    <p style="color:#555;">
+      {{ n_pairings }} graduated pairing{{ n_pairings|pluralize }} ·
+      {{ n_things }} thing{{ n_things|pluralize }} ×
+      {{ n_scales }} scale{{ n_scales|pluralize }}.
+      All figures are from anonymous aggregate snapshots. Export the full dataset
+      with <code>manage.py export_dataset &lt;dir&gt;</code>.
+    </p>
+
+    <h2>Scale correlations</h2>
+    <p style="color:#555;">Do things sit in similar places on two scales? Red = move
+       together, blue = move opposite. Hover a cell for the exact <em>r</em>.</p>
+    <div style="overflow:auto; border:1px solid #eee; padding:8px;">{{ heatmap }}</div>
+
+    <table style="margin-top:12px;">
+      <thead><tr><th>Scale A</th><th>Scale B</th><th>r</th><th>shared things</th></tr></thead>
+      <tbody>
+        {% for c in correlations %}
+          <tr>
+            <td>{{ c.scale_a }}</td>
+            <td>{{ c.scale_b }}</td>
+            <td style="text-align:right;"><strong>{{ c.r|floatformat:2 }}</strong></td>
+            <td style="text-align:right;">{{ c.n_overlap }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:28px;">🎯 Tightest distributions <span style="font-weight:normal;color:#777;">(society agrees)</span></h2>
+    {% include "admin/core/_pairing_stat_table.html" with items=tightest metric="IQR" %}
+
+    <h2 style="margin-top:28px;">⚔️ Society is at war <span style="font-weight:normal;color:#777;">(bimodal — two camps)</span></h2>
+    {% if divided %}
+      {% include "admin/core/_pairing_stat_table.html" with items=divided metric="dip" %}
+    {% else %}
+      <p style="color:#555;">No bimodal pairings detected yet.</p>
+    {% endif %}
+
+    <h2 style="margin-top:28px;">🤖 AI blind spots <span style="font-weight:normal;color:#777;">(prior furthest from the crowd; red line = AI)</span></h2>
+    {% if ai_divergences %}
+      {% include "admin/core/_pairing_stat_table.html" with items=ai_divergences metric="ai" %}
+    {% else %}
+      <p style="color:#555;">No AI priors to compare yet.</p>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

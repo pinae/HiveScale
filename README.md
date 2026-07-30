@@ -388,6 +388,55 @@ The design keeps call volume low and bursts controlled:
 Gemini is always faked in tests via a small client protocol (`FakeGeminiClient`); the
 one `@external` test that hits the real API is excluded from CI.
 
+## Research export & statistics (WP-13)
+
+The whole point of the game is the dataset it produces: where a representative crowd
+places everyday **Things** on bipolar **Scales** (0–100). Its natural shape is a
+**named-dimension embedding** — a Thing × Scale matrix of crowd medians, where every
+axis is a human-readable Scale (train e.g. an embedding model whose dimensions *are*
+the scales).
+
+### Exporting the dataset
+
+```bash
+uv run python manage.py export_dataset ./dataset --min-n 15
+```
+
+Writes a small, versioned bundle (CSV + JSON, no extra dependencies):
+
+| File | What it is |
+| --- | --- |
+| `embedding_matrix.csv` | The headline artifact — Things (rows) × Scales (columns), cell = crowd median. |
+| `pairings.csv` | Per-pairing stats: median, q25/q75, IQR, std, shape, bimodality (dip ratio), AI divergence. |
+| `histograms.csv` | The full 20-bucket crowd distribution per pairing. |
+| `scale_correlations.csv` | Pearson *r* between Scales over shared Things. |
+| `things.csv` / `scales.csv` | Dimension metadata. |
+| `dataset_card.md` | Fields, licensing intent, and known biases. |
+| `manifest.json` | Version, counts, and the filters used. |
+
+- **Aggregate-only, PII-free by construction.** The export reads `DistributionSnapshot`
+  rows, which are built from `eligible_guesses` — quality-flagged, too-fast, and
+  zero-weighted answers are already excluded, and no player identifiers, tokens, emails,
+  or per-answer rows are ever written.
+- `--min-n` sets the minimum eligible answers a pairing needs to be included (default 15).
+- `--parquet` also writes Parquet copies (needs `pyarrow`; omit it for CSV/JSON only).
+
+### Statistics in the Django admin
+
+The admin has a read-only **Research statistics** page (under the `core` app) rendered
+as inline SVG — no matplotlib, no JS, no external assets:
+
+- **Scale correlations** — a colour heatmap (red = move together, blue = opposite) plus
+  a ranked table, so you can see which Scales track each other across Things.
+- **🎯 Tightest distributions** — pairings society most agrees on (narrow IQR).
+- **⚔️ Society is at war** — genuinely bimodal pairings (two opinion camps), via the
+  same `detect_bimodality` the game uses, deepest valley first.
+- **🤖 AI blind spots** — pairings where the LLM prior's median is furthest from the
+  crowd, with the AI distribution overlaid (red line) on the crowd histogram.
+
+Each `DistributionSnapshot` also shows its shape (`🎯 tight` / `🌫️ wide` / `⚔️ divided`)
+in the list and an inline distribution chart on its detail page.
+
 ## Game loop & component workshop (WP-08 / WP-09 / WP-10)
 
 The app boots straight into the playable loop (`PlayScreen`): it deals a blind

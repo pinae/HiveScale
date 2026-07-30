@@ -105,6 +105,20 @@ class Pairing(models.Model):
         return self.graduated_at is not None
 
 
+class DatasetStats(Pairing):
+    """Admin-only proxy: a home for the research statistics dashboard (WP-13).
+
+    Adds no table — it exists so the aggregate stats page (scale correlations,
+    tight vs. divided distributions, AI blind spots) has a discoverable slot in
+    the Django admin without cluttering the real content models.
+    """
+
+    class Meta:
+        proxy = True
+        verbose_name = "Research statistic"
+        verbose_name_plural = "Research statistics"
+
+
 class VoteChoice(models.TextChoices):
     FUN = "fun"
     INTERESTING = "interesting"

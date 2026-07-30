@@ -1,0 +1,32 @@
+{% load static %}
+<table style="width:100%;">
+  <thead>
+    <tr>
+      <th>Thing</th>
+      <th>Scale</th>
+      <th style="text-align:right;">n</th>
+      <th style="text-align:right;">median</th>
+      {% if metric == "IQR" %}<th style="text-align:right;">IQR</th>{% endif %}
+      {% if metric == "dip" %}<th style="text-align:right;">dip ratio</th>{% endif %}
+      {% if metric == "ai" %}<th style="text-align:right;">AI median</th><th style="text-align:right;">Δ median</th>{% endif %}
+      <th>distribution</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+      <tr>
+        <td>{{ item.row.thing }}</td>
+        <td>{{ item.row.scale_label }}</td>
+        <td style="text-align:right;">{{ item.row.n }}</td>
+        <td style="text-align:right;">{{ item.row.median|floatformat:1 }}</td>
+        {% if metric == "IQR" %}<td style="text-align:right;">{{ item.row.iqr|floatformat:1 }}</td>{% endif %}
+        {% if metric == "dip" %}<td style="text-align:right;">{{ item.row.dip_ratio|floatformat:2 }}</td>{% endif %}
+        {% if metric == "ai" %}
+          <td style="text-align:right;">{{ item.row.ai_median|floatformat:1 }}</td>
+          <td style="text-align:right;"><strong>{{ item.row.ai_median_divergence|floatformat:1 }}</strong></td>
+        {% endif %}
+        <td>{{ item.chart }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
