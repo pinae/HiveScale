@@ -52,3 +52,23 @@ def test_skips_non_active_pairings_unless_all_statuses(monkeypatch) -> None:
     enqueued.clear()
     call_command("backfill_ai_estimates", "--all-statuses")
     assert set(enqueued) == {active.pk, draft.pk}
+
+
+def test_limit_caps_how_many_are_enqueued_per_run(monkeypatch) -> None:
+    pairings = [_pairing(i) for i in range(5)]
+    enqueued = _capture_enqueued(monkeypatch)
+
+    call_command("backfill_ai_estimates", "--limit", "2")
+
+    # Only the first two of the five pending pairings are enqueued this run.
+    assert enqueued == [pairings[0].pk, pairings[1].pk]
+
+
+def test_limit_zero_lifts_the_cap(monkeypatch, settings) -> None:
+    settings.GEMINI_BACKFILL_LIMIT = 2  # would cap at 2 by default
+    pairings = [_pairing(i) for i in range(4)]
+    enqueued = _capture_enqueued(monkeypatch)
+
+    call_command("backfill_ai_estimates", "--limit", "0")
+
+    assert set(enqueued) == {p.pk for p in pairings}

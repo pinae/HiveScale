@@ -315,7 +315,9 @@ Thing on the Scale, validated against a JSON schema, and stored as an `AIDistrib
 
 1. Sign in at **[Google AI Studio](https://aistudio.google.com/)** with a Google account.
 2. Open **“Get API key” → “Create API key”** (it can be attached to a Google Cloud
-   project for billing/quota; a free tier exists with low rate limits).
+   project for billing/quota; a free tier exists with low rate limits). ⚠️ The free
+   tier caps **daily** requests per model (e.g. **20/day** for `gemini-3.5-flash`) — enough
+   to trickle estimates in, but not to backfill a large pool. See *collecting estimates* below.
 3. Copy the key — it's a secret, so treat it like a password (never commit it).
 
 ### Setting it
@@ -327,6 +329,7 @@ The backend reads two env vars (see `config/settings.py`):
 | `GEMINI_API_KEY` | Your AI Studio key. **Empty = feature off** (fresh pairings just stay in pioneer mode). | `""` |
 | `GEMINI_MODEL` | Which model to call. | `gemini-3.5-flash` |
 | `GEMINI_RATE_LIMIT` | Per-task Celery cap on Gemini calls (`n/s`, `n/m`, `n/h`). Keep it at or under your tier's quota. | `5/m` |
+| `GEMINI_BACKFILL_LIMIT` | Default per-run cap for `backfill_ai_estimates` (0 = no cap). Matches the free-tier daily quota. | `20` |
 
 - **docker-compose (dev):** put `GEMINI_API_KEY=…` in your `.env` (it's already wired
   into the backend service; keep `.env` out of git).
@@ -352,6 +355,10 @@ The design keeps call volume low and bursts controlled:
   longer than our backoff, so fast-retrying would only burn more of the tiny budget. The task's
   `rate_limit` is what actually spaces the next call out. A bad key or exhausted quota degrades
   the game gracefully; it never crashes it.
+- **Mind the *daily* cap.** `GEMINI_RATE_LIMIT` paces *per-minute* bursts, but the free tier's
+  binding constraint is a **daily** request quota per model (e.g. 20/day). Once it's spent every
+  call 429s until it resets (~midnight Pacific), so pace bulk work with `backfill_ai_estimates
+  --limit` (below) rather than per-minute settings. For a real content pool, enable billing.
 - **Structured output**: requests set `response_mime_type: application/json` and the
   reply is schema-validated (20-bucket histogram, ordered quantiles) before it's trusted.
 - **Best-effort enqueue**: the request-path enqueue fails fast (≈50 ms) if the broker is
@@ -368,6 +375,10 @@ The design keeps call volume low and bursts controlled:
   the worker paces the actual calls — so it pairs naturally with `pair_all` without a
   thundering herd. Needs the worker, Redis, and `GEMINI_API_KEY`; with no reachable
   broker it stops early and tells you.
+  - **On the free tier, it drips.** Each run enqueues at most `GEMINI_BACKFILL_LIMIT` (20)
+    pairings so it doesn't dump a whole pool into the queue to be burned against the daily
+    quota. It's idempotent — re-run it once a day and it picks up where it left off, telling
+    you how many pairings still need one. On a paid tier, pass `--limit 0` to lift the cap.
 
 Gemini is always faked in tests via a small client protocol (`FakeGeminiClient`); the
 one `@external` test that hits the real API is excluded from CI.

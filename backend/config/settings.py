@@ -170,6 +170,10 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
 # minute per model; keep the worker under that so backfills don't trip 429s.
 # Celery syntax: "<n>/s", "<n>/m", or "<n>/h" (see the worker's ``rate_limit``).
 GEMINI_RATE_LIMIT = os.environ.get("GEMINI_RATE_LIMIT", "5/m")
+# Default cap for `manage.py backfill_ai_estimates` (per run). The free tier also
+# has a *daily* request quota per model (e.g. 20/day for gemini-3.5-flash), so the
+# backfill drips at most this many per run and is re-run daily. Set 0 for no cap.
+GEMINI_BACKFILL_LIMIT = int(os.environ.get("GEMINI_BACKFILL_LIMIT", "20"))
 
 # Player level required to unlock Thing/Scale submission (WP-11, plan §1.6).
 CONTENT_SUGGEST_LEVEL = int(os.environ.get("CONTENT_SUGGEST_LEVEL", "10"))

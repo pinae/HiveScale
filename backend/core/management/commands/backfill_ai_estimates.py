@@ -6,9 +6,16 @@ whole pool up front — this enqueues one Gemini task per pairing that doesn't y
 have an estimate for the current model + prompt version.
 
 It only *enqueues* work; the Celery worker does the calls, at its own pace
-(bounded by its ``--concurrency`` and the per-task retry/backoff), so the API
+(bounded by its ``--concurrency`` and the per-task ``rate_limit``), so the API
 account isn't hammered. Requires the worker, Redis, and ``GEMINI_API_KEY`` to be
 running/set; without a reachable broker it stops early rather than spin.
+
+**Free-tier reality.** Gemini's free tier caps *daily* requests per model (e.g.
+20/day for ``gemini-3.5-flash``). Dumping a whole pool into the queue just burns
+those tasks against a ``429 RESOURCE_EXHAUSTED`` wall. Use ``--limit N`` to enqueue
+at most ``N`` per run (``GEMINI_BACKFILL_LIMIT``, default 20) and re-run it daily —
+the command is idempotent, so each run picks up where the last left off. Pass
+``--limit 0`` to lift the cap once you're on a paid tier.
 """
 
 from django.conf import settings
@@ -28,9 +35,22 @@ class Command(BaseCommand):
             action="store_true",
             help="Include non-active pairings (default: active only).",
         )
+        parser.add_argument(
+            "--limit",
+            type=int,
+            default=None,
+            help=(
+                "Enqueue at most this many pairings (0 = no cap). Defaults to "
+                "GEMINI_BACKFILL_LIMIT (20), matching the free tier's daily quota."
+            ),
+        )
 
     def handle(self, *args, **options):
         model = settings.GEMINI_MODEL
+        limit = options["limit"]
+        if limit is None:
+            limit = int(getattr(settings, "GEMINI_BACKFILL_LIMIT", 20))
+
         have = set(
             AIDistribution.objects.filter(
                 model_name=model, prompt_version=PROMPT_VERSION
@@ -41,6 +61,9 @@ class Command(BaseCommand):
             pairings = pairings.filter(status=ContentStatus.ACTIVE)
 
         pending = [pid for pid in pairings.values_list("id", flat=True) if pid not in have]
+        total_pending = len(pending)
+        if limit > 0:
+            pending = pending[:limit]
 
         enqueued = 0
         for pairing_id in pending:
@@ -62,3 +85,11 @@ class Command(BaseCommand):
                 f"{len(have)} pairing(s) already had one."
             )
         )
+        remaining = total_pending - enqueued
+        if remaining > 0:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"{remaining} pairing(s) still without an estimate (capped at "
+                    f"{limit}/run). Re-run tomorrow — the free tier resets daily."
+                )
+            )
