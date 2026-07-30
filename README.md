@@ -140,6 +140,93 @@ carries the player across one of these levels, an explainer card (`LevelUpCard`)
 pops up to introduce the new capability — fired only on genuine in-play crossings,
 never on boot or an account claim, so a returning player isn't spammed.
 
+## Player identity & coming back (no login)
+
+Play is login-free by design — a player never needs a username or password — but
+their XP, streaks, and history still follow them back. There are two layers.
+
+### Anonymous identity (a signed device cookie)
+
+Every player is a `Player` row whose identity is a random opaque token
+(`device_token`, 16 bytes of `secrets`). The browser only ever holds a **signed**
+copy of it in an httpOnly cookie — `bg_player` — set by `POST /api/session/`:
+
+- **Signed**, so it can't be forged: it's `TimestampSigner(salt="hivescale.session").sign(token)`, verified server-side on every request (`core/sessions.py:resolve_player`). A tampered cookie is simply treated as "no session".
+- **httpOnly**, so page scripts (and any XSS) can't read the token; **SameSite=Lax**; **Secure** whenever `DEBUG` is off (i.e. in production over HTTPS).
+- **Long-lived**: `max_age` is ~13 months, and it's re-issued on each `POST /api/session/`, so an active player's identity effectively never expires. No PII is stored for an anonymous player — just a token and game stats.
+
+So **coming back = same browser → same cookie → same player**, with zero friction.
+The limits of this layer are the usual cookie limits: it's per-browser/per-device,
+and clearing cookies or switching devices starts a fresh anonymous player. That's
+exactly what the second layer fixes.
+
+### Claiming an account by email (still no password)
+
+At any point a player can tie their progress to an email so it survives cookie
+loss and follows them across devices — via a magic link, never a password:
+
+1. **`POST /api/session/claim/request/`** `{email}` issues a signed, 30-minute magic-link token (`salt="hivescale.claim"`). Delivery is pluggable via `CLAIM_LINK_DELIVERY`: `echo` (dev/test) returns the token in the response; production emails a link like `https://…/?claim=<token>`.
+2. **`POST /api/session/claim/confirm/`** `{claim_token}` finishes it (`core/services.py:claim_player`):
+   - **First claim of that email** → the current player is attached to a Django `User(username=email)`, its **device token is rotated** (the old cookie stops working), and a fresh cookie is set. `merged: false`.
+   - **Email already has an account** (claimed earlier, e.g. on another device) → the two are **merged**: guesses (and their scores) move to the existing account, XP is summed, the higher level is kept, calibration counters add up, the anonymous row is deleted, and the response re-cookies for the account. `merged: true`.
+
+On the front end this is the **"Save progress"** panel (`ClaimPanel`), and opening
+the app from a magic link (`?claim=<token>`) auto-confirms via `useMagicLinkClaim`,
+which then strips the token from the URL so a refresh can't replay a spent link.
+
+The net effect: play instantly as a guest, and *optionally* claim an email once to
+make the account portable — logging back in later is just clicking a fresh magic
+link, never entering a password.
+
+## Daily Wave
+
+The Daily Wave is the once-a-day, **same-for-everyone** appointment: a fixed set of
+pairings and a shareable, Wordle-style emoji result (plan §2.2).
+
+### The shared set
+
+`DailyWave` stores one row per calendar date with an ordered `pairing_ids` list.
+`generate_daily_wave(day, size=10)` (`core/daily_wave.py`) picks `size` **active**
+pairings using an RNG **seeded by the date** (`day.toordinal()`), so it is
+deterministic and idempotent — every player who reads a given date sees the *same
+pairings in the same order*. It's created by `manage.py generate_daily_wave` (e.g.
+from a nightly cron) or lazily on the first `GET /api/daily-wave/` of the day.
+
+### Playing it
+
+- **`GET /api/daily-wave/`** returns today's progress plus the next *blind* slot to
+  answer (`thing`, `scale`, and a signed `wave_token` — never any distribution, the
+  same blind guarantee as the round loop) and, when finished, the share string.
+- **`POST /api/daily-wave/guess/`** scores one slot by **reusing the round scorer**
+  (`round_api.score_and_record`), so a wave slot behaves exactly like a normal
+  round: the 1.5 s speed floor, scoring against the pre-guess crowd snapshot, the
+  human-vs-pioneer split, and XP/multiplier/streak folding all apply. Each answer is
+  recorded as a `DailyWaveEntry` (unique per player + wave + slot), so the wave is
+  answered **once, in order**.
+
+### The shareable result
+
+Each slot's visible score maps to a grade emoji, best-first:
+
+| Score (0–1000) | Emoji | Meaning |
+| --- | --- | --- |
+| ≥ 800 | 🎯 | bullseye |
+| ≥ 500 | 🌊 | rode the wave |
+| ≥ 250 | 🌫️ | foggy |
+| < 250 | 🥶 | cold |
+
+When every slot is answered the wave is `completed` and `share_string` is filled in:
+
+```
+HiveScale 2026-07-28
+🎯🌊🌊🌫️🎯🌊🥶🌊🎯🌊
+6120 pts · 🔥4
+```
+
+(the `· 🔥N` daily-streak suffix appears only when the streak is non-zero). The front
+end's `DailyWaveResult` copies this exact text to the clipboard — spoiler-free, since
+it shows grades but never the answers.
+
 ## Session API (WP-04) — curl demo
 
 Anonymous identity is a signed, httpOnly cookie; the raw device token never
