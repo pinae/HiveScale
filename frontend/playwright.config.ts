@@ -30,7 +30,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["line"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: "http://localhost:5173",
+    // Dedicated ports (5174/8001) so the e2e stack never collides with — or
+    // silently reuses — a dev/prod stack you may have running on 5173/8000.
+    baseURL: "http://localhost:5174",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -53,9 +55,9 @@ export default defineConfig({
         "uv run python manage.py seed_demo --reset && " +
         // --nothreading serialises requests so parallel workers never hit a
         // SQLite write lock; --noreload keeps it a single killable process.
-        "uv run python manage.py runserver 8000 --noreload --nothreading",
+        "uv run python manage.py runserver 8001 --noreload --nothreading",
       cwd: "../backend",
-      url: "http://localhost:8000/api/health/",
+      url: "http://localhost:8001/api/health/",
       env: {
         DATABASE_URL: "sqlite:///e2e-db.sqlite3",
         DJANGO_SECRET_KEY: "e2e-insecure-key",
@@ -72,8 +74,10 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: "yarn dev --port 5173",
-      url: "http://localhost:5173",
+      command: "yarn dev --port 5174",
+      url: "http://localhost:5174",
+      // Proxy /api to the e2e backend (8001), not the default dev target (8000).
+      env: { VITE_API_PROXY_TARGET: "http://localhost:8001" },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
