@@ -9,6 +9,20 @@ from core.models import Pairing
 logger = logging.getLogger(__name__)
 
 
+def _enqueue_fast(task, args: tuple) -> None:
+    """Publish a task with a single, short broker-connection attempt.
+
+    The cold-start and sanity-check enqueues run in the request path and are
+    best-effort, so a dead/absent broker must fail in milliseconds rather than
+    block the request while celery retries the connection.
+    """
+    from config.celery import app
+
+    with app.connection_for_write(connect_timeout=2) as conn:
+        conn.ensure_connection(max_retries=0)
+        task.apply_async(args, connection=conn, retry=False)
+
+
 @shared_task(name="core.estimate_distribution")
 def estimate_distribution(pairing_id: int) -> int | None:
     """Cold-start worker: store an AI distribution estimate for a pairing.
@@ -35,7 +49,7 @@ def schedule_cold_start(pairing: Pairing) -> bool:
     if pairing.n_answers > 0 or pairing.graduated or pairing.ai_distributions.exists():
         return False
     try:
-        estimate_distribution.delay(pairing.pk)
+        _enqueue_fast(estimate_distribution, (pairing.pk,))
         return True
     except Exception as exc:  # broker down, misconfig — pioneer mode still works
         logger.warning("could not enqueue cold start for pairing %s: %s", pairing.pk, exc)
@@ -68,7 +82,7 @@ def schedule_sanity_check(kind: str, obj_id: int) -> bool:
     """Best-effort enqueue of a content sanity check; never breaks the request."""
     task = sanity_check_thing if kind == "thing" else sanity_check_scale
     try:
-        task.delay(obj_id)
+        _enqueue_fast(task, (obj_id,))
         return True
     except Exception as exc:  # broker down — the item just waits in the queue
         logger.warning("could not enqueue sanity check for %s %s: %s", kind, obj_id, exc)

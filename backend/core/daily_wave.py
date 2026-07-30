@@ -5,10 +5,17 @@ identical for everyone, plus a Wordle-style shareable emoji result.
 import datetime
 import random
 
+from django.conf import settings
+
 from core.models import ContentStatus, DailyWave, Pairing
 
 #: How many pairings make up a Daily Wave.
 WAVE_SIZE = 10
+
+
+def daily_wave_level() -> int:
+    """Player level that unlocks the Daily Wave (plan §2.2)."""
+    return int(getattr(settings, "DAILY_WAVE_LEVEL", 3))
 
 #: Score thresholds (0-1000) mapped to a result emoji, best first.
 GRADES: tuple[tuple[float, str], ...] = (

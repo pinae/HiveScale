@@ -19,10 +19,13 @@ export async function sessionXp(page: Page): Promise<number> {
   return Number(await page.getByTestId("session-xp").textContent());
 }
 
-/** Dismiss a level-up explainer card if one is currently on screen. */
+/** Dismiss any level-up explainer cards currently queued (they can stack when a
+ * single round crosses more than one milestone). */
 export async function dismissLevelUp(page: Page) {
   const gotIt = page.getByRole("button", { name: /got it/i });
-  if (await gotIt.isVisible().catch(() => false)) await gotIt.click();
+  for (let i = 0; i < 5 && (await gotIt.isVisible().catch(() => false)); i++) {
+    await gotIt.click();
+  }
 }
 
 /**

@@ -43,8 +43,9 @@ export interface LevelProgress {
   next_level_xp: number;
 }
 
-/** Level-gated contribution features the player has unlocked. */
+/** Level-gated features the player has unlocked. */
 export interface Unlocks {
+  daily_wave: boolean;
   vote: boolean;
   challenge: boolean;
   scale: boolean;

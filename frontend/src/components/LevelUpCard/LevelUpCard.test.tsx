@@ -19,7 +19,9 @@ describe("LevelUpCard", () => {
   });
 
   it("names the right capability for each milestone", () => {
-    const { rerender } = render(<LevelUpCard level={5} onDismiss={() => {}} />);
+    const { rerender } = render(<LevelUpCard level={3} onDismiss={() => {}} />);
+    expect(screen.getByRole("dialog", { name: /daily wave unlocked/i })).toBeInTheDocument();
+    rerender(<LevelUpCard level={5} onDismiss={() => {}} />);
     expect(screen.getByRole("dialog", { name: /voting unlocked/i })).toBeInTheDocument();
     rerender(<LevelUpCard level={10} onDismiss={() => {}} />);
     expect(screen.getByRole("dialog", { name: /challenges unlocked/i })).toBeInTheDocument();

@@ -246,7 +246,7 @@ def test_next_round_schedules_cold_start_for_a_fresh_pairing(monkeypatch) -> Non
     from core import tasks
 
     scheduled: list[int] = []
-    monkeypatch.setattr(tasks.estimate_distribution, "delay", scheduled.append)
+    monkeypatch.setattr(tasks, "_enqueue_fast", lambda task, args: scheduled.append(args[0]))
 
     pairing = _make_pairing()
     client = APIClient()
@@ -260,7 +260,7 @@ def test_next_round_does_not_schedule_for_a_graduated_pairing(monkeypatch) -> No
     from core import tasks
 
     scheduled: list[int] = []
-    monkeypatch.setattr(tasks.estimate_distribution, "delay", scheduled.append)
+    monkeypatch.setattr(tasks, "_enqueue_fast", lambda task, args: scheduled.append(args[0]))
 
     _graduated_pairing()
     client = APIClient()

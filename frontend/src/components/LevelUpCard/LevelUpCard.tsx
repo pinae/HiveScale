@@ -20,6 +20,14 @@ const CONTENT: Record<number, Content> = {
       "A poorly-covered round resets it to ×1, and a round the crowd is split on leaves it untouched. Tight, accurate intervals are the way to load it up.",
     ],
   },
+  3: {
+    emoji: "🌊",
+    title: "Daily Wave unlocked",
+    lines: [
+      "Every day there's one shared set of pairings — the same for every player — that you can play once. Tap “Daily” in the header to take today's.",
+      "Finish all of them and you get a Wordle-style emoji result you can copy and share.",
+    ],
+  },
   5: {
     emoji: "🗳️",
     title: "Pairing voting unlocked",

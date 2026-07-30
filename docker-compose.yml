@@ -32,8 +32,9 @@ services:
       # Dev: graduate to the human baseline after just a few answers so the
       # animated crowd histogram shows up quickly (production default is 15).
       GRADUATION_MIN_ANSWERS: ${GRADUATION_MIN_ANSWERS:-3}
-      # Dev: unlock the contribution features early so the flows are reachable
-      # without grinding (production defaults are 5 / 10).
+      # Dev: unlock the level-gated features early so the flows are reachable
+      # without grinding (production defaults are 3 / 5 / 10 / 15).
+      CONTENT_DAILY_WAVE_LEVEL: ${CONTENT_DAILY_WAVE_LEVEL:-1}
       CONTENT_VOTE_LEVEL: ${CONTENT_VOTE_LEVEL:-2}
       CONTENT_CHALLENGE_LEVEL: ${CONTENT_CHALLENGE_LEVEL:-3}
       CONTENT_SCALE_LEVEL: ${CONTENT_SCALE_LEVEL:-4}

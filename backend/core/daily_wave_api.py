@@ -17,23 +17,36 @@ from django.core import signing
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from bglib.scoring import Guess as GuessValue
 from bglib.scoring import guess_to_distribution
-from core.daily_wave import generate_daily_wave, grade_emoji, share_string
+from core.daily_wave import daily_wave_level, generate_daily_wave, grade_emoji, share_string
 from core.models import DailyWave, DailyWaveEntry, Pairing
 from core.round_api import (
     ROUND_TOKEN_MAX_AGE,
     _bad_request,
-    _unauthorized,
     score_and_record,
 )
 from core.scheduler import serialize_deal
 from core.sessions import resolve_player
 
 _WAVE_SALT = "hivescale.daily-wave"
+
+
+def _gate(request):
+    """Return (player, None) if allowed to play the Daily Wave, else (None, error)."""
+    player = resolve_player(request)
+    if player is None:
+        return None, Response({"detail": "No active session."}, status=status.HTTP_401_UNAUTHORIZED)
+    if player.level < daily_wave_level():
+        return None, Response(
+            {"detail": f"Reach level {daily_wave_level()} to play the Daily Wave."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    return player, None
 
 
 def _issue_wave_token(day: datetime.date, player, pairing_id: int, index: int) -> str:
@@ -101,9 +114,9 @@ def _progress(wave: DailyWave, player, day: datetime.date) -> dict:
 @api_view(["GET"])
 def daily_wave(request) -> Response:
     """Today's Daily Wave and the player's progress through it."""
-    player = resolve_player(request)
-    if player is None:
-        return _unauthorized()
+    player, denied = _gate(request)
+    if denied is not None:
+        return denied
     day = timezone.localdate()
     wave = _today_wave(day)
     if wave is None:
@@ -115,9 +128,9 @@ def daily_wave(request) -> Response:
 @api_view(["POST"])
 def daily_wave_guess(request) -> Response:
     """Answer one slot of today's Daily Wave; returns the reveal + wave progress."""
-    player = resolve_player(request)
-    if player is None:
-        return _unauthorized()
+    player, denied = _gate(request)
+    if denied is not None:
+        return denied
 
     try:
         ticket = signing.loads(

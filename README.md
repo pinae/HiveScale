@@ -127,8 +127,9 @@ reaching level 5 inside a fortnight *requires* sustaining a high multiplier.
 
 | Level | Unlock |
 | --- | --- |
-| **1** | Normal play (deal → guess → reveal), Daily Wave, streaks, account claim |
+| **1** | Normal play (deal → guess → reveal), streaks, account claim |
 | **2** | The calibration **XP multiplier** starts accruing (×1 → ×10) |
+| **3** | **Daily Wave** — the daily shared set + shareable emoji result |
 | **5** | **Pairing voting** — curate fun/interesting/boring/weird combos |
 | **10** | **Thing challenges** — invent a ≤3-word thing (flat 25,000 XP reward) |
 | **15** | **Scale requests** — craft a surprising new scale, once a day |
@@ -181,7 +182,10 @@ link, never entering a password.
 ## Daily Wave
 
 The Daily Wave is the once-a-day, **same-for-everyone** appointment: a fixed set of
-pairings and a shareable, Wordle-style emoji result (plan §2.2).
+pairings and a shareable, Wordle-style emoji result (plan §2.2). It **unlocks at
+level 3** — the endpoints are gated (`CONTENT_DAILY_WAVE_LEVEL`, default 3; dev/e2e
+lower it) and the header's “Daily” entry only appears once the backend `unlocks`
+flag says so.
 
 ### The shared set
 
@@ -362,8 +366,12 @@ A real leveling curve now drives everything: XP → level via a sharply-widening
 curve (`core/leveling.py`), and a calibration **XP multiplier** (×1–×10) that
 climbs on ≥70%-covered graduated rounds, is neutral on bimodal rounds, and resets
 on a poor one — so reaching level 5 needs sustained calibration, not just volume.
-Level gates then unlock contribution:
+Level gates then unlock features:
 
+- **Level 3 — Daily Wave** *(done)*: the daily shared set unlocks here. The
+  `/api/daily-wave/` endpoints are level-gated (`CONTENT_DAILY_WAVE_LEVEL`), the
+  header entry is driven by the backend `unlocks` flag, and reaching level 3 pops
+  the explainer card.
 - **Level 5 — pairing voting** *(done)*: `GET /api/vote/next/` + `POST /api/vote/`
   serve a thing+scale to judge (fun / interesting / boring / weird). A positive
   vote on a fresh combo promotes it to a real pairing; ≥80% negative votes retire

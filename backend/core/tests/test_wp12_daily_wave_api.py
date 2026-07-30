@@ -23,9 +23,13 @@ WAVE_URL = "/api/daily-wave/"
 GUESS_URL = "/api/daily-wave/guess/"
 
 
-def _session(client: APIClient) -> Player:
+def _session(client: APIClient, level: int = 5) -> Player:
+    """Start a session at a level that clears the Daily Wave gate (level 3)."""
     assert client.post("/api/session/").status_code == status.HTTP_200_OK
-    return Player.objects.latest("created_at")
+    player = Player.objects.latest("created_at")
+    Player.objects.filter(pk=player.pk).update(level=level)
+    player.refresh_from_db()
+    return player
 
 
 def _answer(token: str, center: float = 50.0):
@@ -64,6 +68,14 @@ def _play_all(client: APIClient) -> dict:
 
 def test_wave_requires_a_session() -> None:
     assert APIClient().get(WAVE_URL).status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_wave_is_level_gated() -> None:
+    _make_pairings(12)
+    client = APIClient()
+    _session(client, level=2)  # one below the level-3 gate
+    assert client.get(WAVE_URL).status_code == status.HTTP_403_FORBIDDEN
+    assert client.post(GUESS_URL, _answer("x")).status_code == status.HTTP_403_FORBIDDEN
 
 
 def test_wave_is_lazily_generated_and_blind() -> None:

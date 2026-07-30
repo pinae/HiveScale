@@ -22,10 +22,10 @@ export type Phase = "booting" | "guessing" | "submitting" | "revealing" | "advan
 
 export const DEFAULT_GUESS: GuessValue = { center: 50, widthLeft: 15, widthRight: 15 };
 
-const NO_UNLOCKS: Unlocks = { vote: false, challenge: false, scale: false };
+const NO_UNLOCKS: Unlocks = { daily_wave: false, vote: false, challenge: false, scale: false };
 
 /** Levels that unlock a new capability and get an explainer card. */
-export const MILESTONE_LEVELS = [2, 5, 10, 15];
+export const MILESTONE_LEVELS = [2, 3, 5, 10, 15];
 
 /** Running player progression surfaced in the header (xp/level/multiplier). */
 export interface ProfileState {

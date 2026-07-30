@@ -154,6 +154,14 @@ SPECTACULAR_SETTINGS = {
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
+# The cold-start and content-sanity enqueues are best-effort and fired from the
+# request path, so a slow/absent broker must never block a web request. We don't
+# read task results anywhere, so ignore them (no result-store round-trip), and
+# cap broker connection attempts so a dead/unreachable redis fails in seconds.
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = False
+CELERY_BROKER_TRANSPORT_OPTIONS = {"socket_connect_timeout": 2, "socket_timeout": 2}
+
 # Gemini cold-start worker (WP-07). The key is absent in dev/CI; the worker is
 # always faked in tests and the one real-API test is @external (run manually).
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -164,6 +172,7 @@ CONTENT_SUGGEST_LEVEL = int(os.environ.get("CONTENT_SUGGEST_LEVEL", "10"))
 
 # Level gates for the contribution features (plan §2.x). The dev/e2e stacks
 # lower these so the flows are reachable without grinding to the real levels.
+DAILY_WAVE_LEVEL = int(os.environ.get("CONTENT_DAILY_WAVE_LEVEL", "3"))
 CONTENT_VOTE_LEVEL = int(os.environ.get("CONTENT_VOTE_LEVEL", "5"))
 CONTENT_CHALLENGE_LEVEL = int(os.environ.get("CONTENT_CHALLENGE_LEVEL", "10"))
 CONTENT_SCALE_LEVEL = int(os.environ.get("CONTENT_SCALE_LEVEL", "15"))

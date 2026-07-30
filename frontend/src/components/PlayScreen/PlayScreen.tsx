@@ -164,7 +164,7 @@ export default function PlayScreen({ className }: PlayScreenProps) {
         multiplier={profile.multiplier}
         progress={profile.progress}
         onShowStats={openStats}
-        onDailyWave={() => setShowDailyWave(true)}
+        onDailyWave={profile.unlocks.daily_wave ? () => setShowDailyWave(true) : undefined}
         onVote={profile.unlocks.vote ? () => setShowVote(true) : undefined}
         onChallenge={profile.unlocks.challenge ? () => setShowChallenge(true) : undefined}
         onScaleRequest={profile.unlocks.scale ? () => setShowScaleRequest(true) : undefined}
