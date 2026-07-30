@@ -304,15 +304,67 @@ Frontend MSW handlers are generated from it: `cd frontend && yarn mocks:generate
 rebuilds `src/mocks/openapi.json` + `handlers.generated.ts`, and a vitest drift guard
 fails if any endpoint loses its mock.
 
-## AI cold-start worker (WP-07)
+## AI cold-start worker & Gemini (WP-07)
 
-The first deal of a fresh pairing enqueues a Celery task that asks Gemini (official
-`google-genai` SDK) for a provisional distribution, validated against a JSON schema and
-stored as an `AIDistribution` — a research artifact that is **never** blended into the
-human baseline. Set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`, default
-`gemini-2.0-flash`) to enable it; without a key, or after repeated malformed responses,
-the round falls back to pure pioneer mode. Gemini is always faked in tests, with one
-`@external` smoke test that hits the real API and is excluded from CI.
+Fresh pairings that have no trustworthy human baseline yet (plan §1.5) get a
+*provisional* AI estimate from Gemini. It's asked for a societal distribution of the
+Thing on the Scale, validated against a JSON schema, and stored as an `AIDistribution`
+— a research artifact that is **never** blended into the human baseline.
+
+### Getting a Gemini API key
+
+1. Sign in at **[Google AI Studio](https://aistudio.google.com/)** with a Google account.
+2. Open **“Get API key” → “Create API key”** (it can be attached to a Google Cloud
+   project for billing/quota; a free tier exists with low rate limits).
+3. Copy the key — it's a secret, so treat it like a password (never commit it).
+
+### Setting it
+
+The backend reads two env vars (see `config/settings.py`):
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | Your AI Studio key. **Empty = feature off** (fresh pairings just stay in pioneer mode). | `""` |
+| `GEMINI_MODEL` | Which model to call. | `gemini-3.5-flash` |
+
+- **docker-compose (dev):** put `GEMINI_API_KEY=…` in your `.env` (it's already wired
+  into the backend service; keep `.env` out of git).
+- **Production (Ansible):** it comes from `service_cfg.gemini.api_key` / `.model` in the
+  compose template — store the key in your Ansible vault, not the template.
+
+### Using the API without getting the account blocked
+
+The design keeps call volume low and bursts controlled:
+
+- **Only fresh pairings trigger a call** — not every round. Once a pairing has an
+  estimate (or a human baseline), it's never queried again.
+- **One call per pairing, idempotent.** `generate_ai_distribution` is keyed on
+  `(pairing, model, PROMPT_VERSION)` and returns the stored row without calling if it
+  already exists — so retries and re-runs never duplicate calls.
+- **Off the request path, rate-bounded by the worker.** Calls run on the Celery
+  worker, whose `--concurrency` caps how many happen at once. Each task retries
+  transient/malformed/429 responses up to 3 times with **exponential backoff**
+  (`2^attempt` seconds), then gives up gracefully to pioneer mode — a bad key or a rate
+  limit degrades the game, it never crashes it.
+- **Structured output**: requests set `response_mime_type: application/json` and the
+  reply is schema-validated (20-bucket histogram, ordered quantiles) before it's trusted.
+- **Best-effort enqueue**: the request-path enqueue fails fast (≈50 ms) if the broker is
+  down, so a Redis outage never stalls a deal.
+
+### How estimates are collected for the whole pool
+
+- **Lazily, on demand:** the first time a fresh pairing is *dealt*, the round API
+  enqueues a cold-start task; the worker stores its `AIDistribution`. So estimates
+  accumulate naturally as players encounter new pairings.
+- **Proactively, in bulk:** after a large import (e.g. `pair_all`), run
+  **`manage.py backfill_ai_estimates`** to enqueue an estimate for every active pairing
+  that doesn't have one yet (`--all-statuses` to include drafts). It only *enqueues* —
+  the worker paces the actual calls — so it pairs naturally with `pair_all` without a
+  thundering herd. Needs the worker, Redis, and `GEMINI_API_KEY`; with no reachable
+  broker it stops early and tells you.
+
+Gemini is always faked in tests via a small client protocol (`FakeGeminiClient`); the
+one `@external` test that hits the real API is excluded from CI.
 
 ## Game loop & component workshop (WP-08 / WP-09 / WP-10)
 
