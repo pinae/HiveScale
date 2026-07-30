@@ -86,13 +86,19 @@ export default function WaveSlider({
   const [dragTarget, setDragTarget] = useState<DragTarget | null>(null);
   const grabOffsetRef = useRef(0);
 
-  const { center, widthLeft, widthRight } = value;
+  const { center } = value;
   const { lower, upper } = effectiveBounds(value, min, max);
   const toRatio = (x: number) => (max > min ? (x - min) / (max - min) : 0);
   const toLeft = (x: number) => (dir === "rtl" ? 1 - toRatio(x) : toRatio(x));
 
   const emit = useCallback(
     (next: GuessValue) => {
+      // Keep the ref authoritative *now*, before React re-renders: rapid input
+      // (three arrow presses in one tick, a fast wheel) fires several handlers
+      // between renders, and each must build on the previous emit — not the
+      // stale value from the render that bound it. Without this, quick keypresses
+      // collapse into a single step.
+      valueRef.current = next;
       hapticTick(next.center, min, max);
       onChangeRef.current(next);
     },
@@ -192,12 +198,15 @@ export default function WaveSlider({
 
   function handleCenterKeyDown(ev: KeyboardEvent<HTMLDivElement>) {
     if (disabled) return;
-    const moveTo = (c: number) => emit(moveCenter(value, c, min, max));
+    // Read the live value, not the render-time closure, so back-to-back presses
+    // that arrive before a re-render each build on the previous one.
+    const v = valueRef.current;
+    const moveTo = (c: number) => emit(moveCenter(v, c, min, max));
     const widen = (d: number) =>
       emit({
-        center,
-        widthLeft: Math.max(0, widthLeft + d),
-        widthRight: Math.max(0, widthRight + d),
+        center: v.center,
+        widthLeft: Math.max(0, v.widthLeft + d),
+        widthRight: Math.max(0, v.widthRight + d),
       });
 
     let handled = true;
@@ -205,10 +214,10 @@ export default function WaveSlider({
       if (ev.key === "ArrowRight" || ev.key === "ArrowUp") widen(step);
       else if (ev.key === "ArrowLeft" || ev.key === "ArrowDown") widen(-step);
       else handled = false;
-    } else if (ev.key === "ArrowRight" || ev.key === "ArrowUp") moveTo(center + step);
-    else if (ev.key === "ArrowLeft" || ev.key === "ArrowDown") moveTo(center - step);
-    else if (ev.key === "PageUp") moveTo(center + bigStep);
-    else if (ev.key === "PageDown") moveTo(center - bigStep);
+    } else if (ev.key === "ArrowRight" || ev.key === "ArrowUp") moveTo(v.center + step);
+    else if (ev.key === "ArrowLeft" || ev.key === "ArrowDown") moveTo(v.center - step);
+    else if (ev.key === "PageUp") moveTo(v.center + bigStep);
+    else if (ev.key === "PageDown") moveTo(v.center - bigStep);
     else if (ev.key === "Home") moveTo(min);
     else if (ev.key === "End") moveTo(max);
     else handled = false;
@@ -216,8 +225,16 @@ export default function WaveSlider({
     if (handled) ev.preventDefault();
   }
 
-  const nudgeLower = (delta: number) => emit(dragEnd(value, "lower", lower + delta, min, max));
-  const nudgeUpper = (delta: number) => emit(dragEnd(value, "upper", upper + delta, min, max));
+  const nudgeLower = (delta: number) => {
+    const v = valueRef.current;
+    const b = effectiveBounds(v, min, max);
+    emit(dragEnd(v, "lower", b.lower + delta, min, max));
+  };
+  const nudgeUpper = (delta: number) => {
+    const v = valueRef.current;
+    const b = effectiveBounds(v, min, max);
+    emit(dragEnd(v, "upper", b.upper + delta, min, max));
+  };
 
   return (
     <div className="bsg-slider" data-disabled={disabled || undefined} dir={dir}>

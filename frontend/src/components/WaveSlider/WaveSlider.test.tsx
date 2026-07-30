@@ -56,6 +56,24 @@ describe("WaveSlider — ARIA & keyboard", () => {
     expect(now(guess())).toBe("100");
   });
 
+  it("accumulates rapid keypresses that land before a re-render", () => {
+    // A fast agent (or CI) fires several keydowns inside one React tick, before
+    // the controlled value re-renders. Each must build on the previous emit, not
+    // the stale render-time value — else the presses collapse into a single step.
+    // Value is held fixed here (spy onChange, no state) to model that window.
+    const onChange = vi.fn();
+    const value: GuessValue = { center: 50, widthLeft: 12, widthRight: 12 };
+    render(<WaveSlider value={value} onChange={onChange} />);
+    const thumb = screen.getByRole("slider", { name: /your guess/i });
+
+    fireEvent.keyDown(thumb, { key: "ArrowRight" });
+    fireEvent.keyDown(thumb, { key: "ArrowRight" });
+    fireEvent.keyDown(thumb, { key: "ArrowRight" });
+
+    expect(onChange).toHaveBeenCalledTimes(3);
+    expect(onChange.mock.calls[2][0].center).toBe(53);
+  });
+
   it("resizes symmetrically with shift+arrows", () => {
     render(<Harness />);
     fireEvent.keyDown(guess(), { key: "ArrowRight", shiftKey: true });
