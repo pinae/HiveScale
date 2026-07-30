@@ -1,0 +1,22 @@
+# Production frontend image: build the Vite SPA, then serve it (and proxy the
+# API) with nginx behind Traefik. The dev image (Dockerfile) still runs the Vite
+# dev server; this file is only used by the production compose.
+
+# --- build the static bundle ---
+FROM node:22-slim AS build
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+WORKDIR /app
+COPY package.json yarn.lock .yarnrc.yml ./
+RUN yarn install --immutable
+COPY . .
+# The SPA talks to /api same-origin, so no build-time API URL is needed.
+RUN yarn build
+
+# --- serve with nginx ---
+FROM nginx:1.27-alpine
+# Baked config (the SPA changes far more often than this does).
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+# nginx:alpine's default CMD runs `nginx -g "daemon off;"`.

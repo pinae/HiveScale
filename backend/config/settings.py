@@ -67,12 +67,28 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# DATABASE_URL (postgres://...) in docker-compose/CI/prod; sqlite fallback keeps
-# `pytest` runnable with zero services for fast local TDD loops.
+# Database configuration, in priority order:
+#   1. DATABASE_URL (12-factor URL) — used by docker-compose dev, CI, and the
+#      e2e stack, which already export it (incl. sqlite:// for tests).
+#   2. Discrete DB_* vars mapped straight onto Django's native DATABASES keys —
+#      the Django-recommended form and what the production Ansible template sets.
+#   3. sqlite fallback — keeps `pytest` runnable with zero services.
 if os.environ.get("DATABASE_URL"):
     import dj_database_url
 
     DATABASES = {"default": dj_database_url.config(conn_max_age=60)}
+elif os.environ.get("DB_NAME"):
+    DATABASES = {
+        "default": {
+            "ENGINE": os.environ.get("DB_ENGINE", "django.db.backends.postgresql"),
+            "NAME": os.environ["DB_NAME"],
+            "USER": os.environ.get("DB_USER", ""),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+            "HOST": os.environ.get("DB_HOST", "localhost"),
+            "PORT": os.environ.get("DB_PORT", ""),
+            "CONN_MAX_AGE": 60,
+        }
+    }
 else:
     DATABASES = {
         "default": {
@@ -94,9 +110,26 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+# collectstatic target; served by nginx from /app/static in production.
+STATIC_ROOT = os.environ.get("DJANGO_STATIC_ROOT", BASE_DIR / "static")
+
+# Uploaded media (WP-future: image Things); served by nginx from /app/media.
+MEDIA_URL = "media/"
+MEDIA_ROOT = os.environ.get("DJANGO_MEDIA_ROOT", BASE_DIR / "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Behind a TLS-terminating reverse proxy (Traefik in production), trust its
+# X-Forwarded-Proto so request.is_secure() reflects the real HTTPS request —
+# needed for correct admin CSRF and Secure cookies. Only enabled when the
+# environment sets the flag, so a directly-reachable dev server can't be fooled
+# by a spoofed header.
+if os.environ.get("DJANGO_SECURE_PROXY_SSL_HEADER") == "1":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# In production (DEBUG off) the site is HTTPS-only, so scope cookies to HTTPS.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
