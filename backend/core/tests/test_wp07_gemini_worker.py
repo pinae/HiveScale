@@ -20,6 +20,7 @@ import json
 import pytest
 from rest_framework.test import APIClient
 
+from core import ai
 from core.ai import (
     PROMPT_VERSION,
     FakeGeminiClient,
@@ -31,6 +32,27 @@ from core.models import AIDistribution, Guess, Pairing, Player, Scale, Thing
 from core.services import eligible_guesses, recompute_snapshot
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def _reset_ai_cooldown():
+    """Rate-limit cooldown is process-wide module state; isolate it per test."""
+    ai.reset_cooldown()
+    yield
+    ai.reset_cooldown()
+
+
+# Realistic 429 bodies (google-genai stringifies the error dict like this).
+_DAILY_429 = (
+    "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'quota exceeded', "
+    "'status': 'RESOURCE_EXHAUSTED', 'details': [{'quotaId': "
+    "'GenerateRequestsPerDayPerProjectPerModel-FreeTier'}, {'retryDelay': '29s'}]}}"
+)
+_PER_MINUTE_429 = (
+    "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'rate limit', "
+    "'status': 'RESOURCE_EXHAUSTED', 'details': [{'quotaId': "
+    "'GenerateRequestsPerMinutePerProjectPerModel-FreeTier'}, {'retryDelay': '29s'}]}}"
+)
 
 
 # --- Fixtures ---------------------------------------------------------------
@@ -155,6 +177,56 @@ def test_rate_limit_skips_retries_and_falls_back_immediately() -> None:
     assert AIDistribution.objects.filter(pairing=pairing).count() == 0
     assert client.calls == 1  # no wasted retries against an exhausted quota
     assert sleeps == []
+
+
+def test_rate_limit_arms_a_cooldown_that_skips_later_calls_without_hitting_the_api() -> None:
+    # One 429 means the *account* is out of budget, not just this pairing — so the
+    # next queued task must not fire another doomed request. It should short-circuit
+    # to pioneer mode without touching the client until the quota resets.
+    now = 1_000.0
+    first = FakeGeminiClient([RuntimeError(_DAILY_429)])
+    assert generate_ai_distribution(_make_pairing(1), first, now=lambda: now) is None
+    assert first.calls == 1
+
+    # A second pairing whose client *would* succeed — but we're in cooldown.
+    second = FakeGeminiClient([_valid_response()])
+    result = generate_ai_distribution(_make_pairing(2), second, now=lambda: now)
+
+    assert result is None
+    assert second.calls == 0  # the wall isn't probed again
+    assert ai.cooldown_remaining(now) > 0
+
+
+def test_daily_quota_cooldown_lasts_until_reset_not_the_short_retry_hint() -> None:
+    # The daily quota won't clear for hours, so a 29s retryDelay hint is misleading:
+    # we cool down until the actual midnight-Pacific rollover instead.
+    now = 1_000.0
+    generate_ai_distribution(_make_pairing(), FakeGeminiClient([RuntimeError(_DAILY_429)]),
+                             now=lambda: now)
+    assert ai.cooldown_remaining(now) > 60.0  # far longer than the 29s hint
+
+
+def test_per_minute_rate_limit_honours_the_short_retry_delay() -> None:
+    # A transient per-minute cap really does clear in seconds, so we honour its hint.
+    now = 1_000.0
+    generate_ai_distribution(_make_pairing(), FakeGeminiClient([RuntimeError(_PER_MINUTE_429)]),
+                             now=lambda: now)
+    remaining = ai.cooldown_remaining(now)
+    assert 0 < remaining <= 30.0  # ~29s retryDelay, not a day
+
+
+def test_calls_resume_once_the_cooldown_expires() -> None:
+    armed_at = 1_000.0
+    generate_ai_distribution(_make_pairing(1), FakeGeminiClient([RuntimeError(_PER_MINUTE_429)]),
+                             now=lambda: armed_at)
+
+    # Well past the ~29s cooldown, a fresh pairing is estimated normally again.
+    later = armed_at + 120.0
+    client = FakeGeminiClient([_valid_response()])
+    result = generate_ai_distribution(_make_pairing(2), client, now=lambda: later)
+
+    assert result is not None
+    assert client.calls == 1
 
 
 def test_persistent_failure_falls_back_to_pioneer_mode() -> None:

@@ -22,8 +22,11 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
+from datetime import datetime, timedelta
 from typing import Protocol
+from zoneinfo import ZoneInfo
 
 import jsonschema
 
@@ -37,6 +40,13 @@ PROMPT_VERSION = "v1"
 
 #: Default number of Gemini attempts before falling back to pioneer mode.
 MAX_ATTEMPTS = 3
+
+#: Where the Gemini free-tier *daily* request quota rolls over. Google resets it
+#: at midnight Pacific, so we cool down until then rather than probe uselessly.
+QUOTA_RESET_TZ = ZoneInfo("America/Los_Angeles")
+
+#: Cooldown to use for a rate-limit error that carries no usable ``retryDelay``.
+DEFAULT_RATE_COOLDOWN = 60.0
 
 #: JSON contract the model must satisfy. A 20-bucket histogram keeps AI and
 #: human distributions directly comparable (same buckets as the snapshot).
@@ -77,6 +87,70 @@ def _is_rate_limited(exc: Exception) -> bool:
         return True
     text = str(exc).upper()
     return "RESOURCE_EXHAUSTED" in text or "429" in text or "RATE LIMIT" in text
+
+
+# ---------------------------------------------------------------------------
+# Rate-limit cooldown
+# ---------------------------------------------------------------------------
+#
+# A single 429 tells us the whole account is out of budget, not just this one
+# pairing — so probing again with the next queued task just hammers a wall that
+# won't move for a while. Instead we read the server's own reset hint and pause
+# *all* Gemini calls in this worker process until then; queued tasks short-circuit
+# to pioneer mode meanwhile instead of each firing a doomed request.
+#
+# State is per worker process (in-memory). With prefork concurrency each child
+# keeps its own gate, so a restart clears it — a fresh probe then re-arms it.
+
+_cooldown_until: float = 0.0  # wall-clock epoch seconds; calls pause until then
+
+_RETRY_DELAY_RE = re.compile(r"retryDelay['\"]?\s*[:=]\s*['\"]?(\d+(?:\.\d+)?)\s*s")
+
+
+def reset_cooldown() -> None:
+    """Clear the rate-limit cooldown (used by tests and on manual recovery)."""
+    global _cooldown_until
+    _cooldown_until = 0.0
+
+
+def cooldown_remaining(now: float | None = None) -> float:
+    """Seconds until Gemini calls may resume (0.0 if not cooling down)."""
+    return max(0.0, _cooldown_until - (time.time() if now is None else now))
+
+
+def _enter_cooldown(seconds: float, now: float) -> None:
+    global _cooldown_until
+    _cooldown_until = max(_cooldown_until, now + seconds)
+
+
+def _retry_delay_seconds(exc: Exception) -> float | None:
+    """The API's suggested ``retryDelay`` in seconds, if the error carries one."""
+    match = _RETRY_DELAY_RE.search(str(exc))
+    return float(match.group(1)) if match else None
+
+
+def _is_daily_quota(exc: Exception) -> bool:
+    """Whether the 429 is a *daily* quota (vs. a transient per-minute rate cap)."""
+    return "PerDay" in str(exc)
+
+
+def _seconds_until_daily_reset(now: float) -> float:
+    """Seconds from ``now`` (epoch) to the next Gemini daily-quota reset."""
+    local = datetime.fromtimestamp(now, tz=QUOTA_RESET_TZ)
+    reset = (local + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return max(DEFAULT_RATE_COOLDOWN, (reset - local).total_seconds())
+
+
+def _cooldown_for(exc: Exception, now: float) -> float:
+    """How long to pause after ``exc``: until reset for a daily cap, else retryDelay.
+
+    A daily quota won't clear for hours, so the server's short ``retryDelay`` hint
+    is misleading there — we wait until the actual midnight-Pacific rollover. A
+    per-minute rate cap does clear quickly, so we honour its ``retryDelay``.
+    """
+    if _is_daily_quota(exc):
+        return _seconds_until_daily_reset(now)
+    return _retry_delay_seconds(exc) or DEFAULT_RATE_COOLDOWN
 
 
 class GeminiClient(Protocol):
@@ -168,6 +242,7 @@ def generate_ai_distribution(
     max_attempts: int = MAX_ATTEMPTS,
     sleep=time.sleep,
     backoff_base: float = 2.0,
+    now=time.time,
 ) -> AIDistribution | None:
     """Fetch, validate, and store an AI estimate for ``pairing``.
 
@@ -175,6 +250,11 @@ def generate_ai_distribution(
     without calling the API. Retries transient/malformed responses with an
     injected ``sleep`` for determinism, and returns ``None`` (pure pioneer
     mode) once ``max_attempts`` are exhausted.
+
+    Respects a process-wide rate-limit cooldown: if a recent 429 armed it, the
+    call short-circuits to pioneer mode without touching the API until the
+    quota's reset time (see :func:`_cooldown_for`). ``now`` is injectable for
+    deterministic tests.
     """
     existing = AIDistribution.objects.filter(
         pairing=pairing, model_name=client.model_name, prompt_version=PROMPT_VERSION
@@ -182,19 +262,30 @@ def generate_ai_distribution(
     if existing is not None:
         return existing
 
+    remaining = cooldown_remaining(now())
+    if remaining > 0:
+        logger.info(
+            "AI estimate for pairing %s skipped: quota cooldown, ~%.0fs remaining",
+            pairing.pk, remaining,
+        )
+        return None
+
     prompt = build_prompt(pairing)
     for attempt in range(1, max_attempts + 1):
         try:
             parsed = parse_response(client.generate(prompt))
         except Exception as exc:  # any client/parse failure is retryable
             if _is_rate_limited(exc):
-                # Quota exhausted: our short backoff can't outwait the API's
-                # multi-second retryDelay, so retrying here only burns more of
-                # the tiny free-tier budget. Give up now; the task's own
-                # rate_limit paces the next attempt.
+                # Quota exhausted: this isn't specific to one pairing, so arm a
+                # process-wide cooldown until the quota resets and stop probing.
+                # Retrying now (or on the next queued task) only hammers a wall
+                # that won't move — the server's own reset hint tells us how long.
+                cooldown = _cooldown_for(exc, now())
+                _enter_cooldown(cooldown, now())
                 logger.warning(
-                    "AI estimate rate-limited for pairing %s; skipping retries: %s",
-                    pairing.pk, exc,
+                    "AI estimate rate-limited for pairing %s; pausing AI calls "
+                    "for ~%.0fs until quota resets: %s",
+                    pairing.pk, cooldown, exc,
                 )
                 return None
             logger.warning(

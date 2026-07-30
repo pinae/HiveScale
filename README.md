@@ -352,9 +352,14 @@ The design keeps call volume low and bursts controlled:
 - **429s stop, they don't retry.** Transient/malformed responses are retried up to 3 times
   with **exponential backoff** (`2^attempt` seconds), but a `429 RESOURCE_EXHAUSTED` (quota)
   short-circuits to pioneer mode immediately — the API's `retryDelay` is tens of seconds, far
-  longer than our backoff, so fast-retrying would only burn more of the tiny budget. The task's
-  `rate_limit` is what actually spaces the next call out. A bad key or exhausted quota degrades
-  the game gracefully; it never crashes it.
+  longer than our backoff, so fast-retrying would only burn more of the tiny budget.
+- **A 429 pauses the whole worker, it doesn't just skip one pairing.** A quota rejection means
+  the *account* is out of budget, so the worker reads the error's reset hint and arms a
+  process-wide **cooldown**: queued tasks short-circuit to pioneer mode without calling the API
+  until the quota resets, instead of each firing a doomed request every few seconds. It tells a
+  *daily* quota (reset at midnight Pacific — waits until then) from a transient *per-minute* cap
+  (waits the `retryDelay`, ~30–60 s). The cooldown is in-memory per worker process, so restarting
+  the worker clears it and a single fresh probe re-arms it if the quota is still spent.
 - **Mind the *daily* cap.** `GEMINI_RATE_LIMIT` paces *per-minute* bursts, but the free tier's
   binding constraint is a **daily** request quota per model (e.g. 20/day). Once it's spent every
   call 429s until it resets (~midnight Pacific), so pace bulk work with `backfill_ai_estimates
