@@ -326,6 +326,7 @@ The backend reads two env vars (see `config/settings.py`):
 | --- | --- | --- |
 | `GEMINI_API_KEY` | Your AI Studio key. **Empty = feature off** (fresh pairings just stay in pioneer mode). | `""` |
 | `GEMINI_MODEL` | Which model to call. | `gemini-3.5-flash` |
+| `GEMINI_RATE_LIMIT` | Per-task Celery cap on Gemini calls (`n/s`, `n/m`, `n/h`). Keep it at or under your tier's quota. | `5/m` |
 
 - **docker-compose (dev):** put `GEMINI_API_KEY=…` in your `.env` (it's already wired
   into the backend service; keep `.env` out of git).
@@ -342,10 +343,15 @@ The design keeps call volume low and bursts controlled:
   `(pairing, model, PROMPT_VERSION)` and returns the stored row without calling if it
   already exists — so retries and re-runs never duplicate calls.
 - **Off the request path, rate-bounded by the worker.** Calls run on the Celery
-  worker, whose `--concurrency` caps how many happen at once. Each task retries
-  transient/malformed/429 responses up to 3 times with **exponential backoff**
-  (`2^attempt` seconds), then gives up gracefully to pioneer mode — a bad key or a rate
-  limit degrades the game, it never crashes it.
+  worker. The `estimate_distribution` task carries a **`rate_limit`** (`GEMINI_RATE_LIMIT`,
+  default `5/m`) so the worker paces itself under the free tier's 5-requests/minute/model
+  quota no matter how many tasks are queued, and `--concurrency` caps how many run at once.
+- **429s stop, they don't retry.** Transient/malformed responses are retried up to 3 times
+  with **exponential backoff** (`2^attempt` seconds), but a `429 RESOURCE_EXHAUSTED` (quota)
+  short-circuits to pioneer mode immediately — the API's `retryDelay` is tens of seconds, far
+  longer than our backoff, so fast-retrying would only burn more of the tiny budget. The task's
+  `rate_limit` is what actually spaces the next call out. A bad key or exhausted quota degrades
+  the game gracefully; it never crashes it.
 - **Structured output**: requests set `response_mime_type: application/json` and the
   reply is schema-validated (20-bucket histogram, ordered quantiles) before it's trusted.
 - **Best-effort enqueue**: the request-path enqueue fails fast (≈50 ms) if the broker is

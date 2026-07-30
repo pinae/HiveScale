@@ -141,6 +141,22 @@ def test_api_errors_are_retried_too() -> None:
     assert client.calls == 2
 
 
+def test_rate_limit_skips_retries_and_falls_back_immediately() -> None:
+    # A 429 quota rejection: our short backoff can't outwait the API's multi-second
+    # retryDelay, so retrying only burns more of the tiny free-tier budget. Bail out
+    # after a single call rather than firing all three attempts.
+    pairing = _make_pairing()
+    client = FakeGeminiClient([RuntimeError("429 RESOURCE_EXHAUSTED: quota exceeded")])
+    sleeps: list[float] = []
+
+    result = generate_ai_distribution(pairing, client, sleep=sleeps.append)
+
+    assert result is None  # pioneer mode
+    assert AIDistribution.objects.filter(pairing=pairing).count() == 0
+    assert client.calls == 1  # no wasted retries against an exhausted quota
+    assert sleeps == []
+
+
 def test_persistent_failure_falls_back_to_pioneer_mode() -> None:
     pairing = _make_pairing()
     client = FakeGeminiClient(["still not json"])  # repeats the last response

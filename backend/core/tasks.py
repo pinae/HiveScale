@@ -3,6 +3,7 @@
 import logging
 
 from celery import shared_task
+from django.conf import settings
 
 from core.models import Pairing
 
@@ -23,7 +24,7 @@ def _enqueue_fast(task, args: tuple) -> None:
         task.apply_async(args, connection=conn, retry=False)
 
 
-@shared_task(name="core.estimate_distribution")
+@shared_task(name="core.estimate_distribution", rate_limit=settings.GEMINI_RATE_LIMIT)
 def estimate_distribution(pairing_id: int) -> int | None:
     """Cold-start worker: store an AI distribution estimate for a pairing.
 

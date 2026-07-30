@@ -63,6 +63,22 @@ class InvalidAIResponse(ValueError):
     """The model's output did not satisfy the distribution contract."""
 
 
+def _is_rate_limited(exc: Exception) -> bool:
+    """Whether ``exc`` is a Gemini quota / rate-limit rejection (HTTP 429).
+
+    The free tier allows only ~5 requests/minute/model and answers overflow with
+    ``429 RESOURCE_EXHAUSTED`` plus a ``retryDelay`` on the order of tens of
+    seconds. Our in-function backoff (1-2 s) is far too short to outwait that, so
+    fast-retrying just burns three requests for nothing. Detect it and bail out
+    of the retry loop immediately, leaving the quota for the next task.
+    """
+    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+    if code == 429:
+        return True
+    text = str(exc).upper()
+    return "RESOURCE_EXHAUSTED" in text or "429" in text or "RATE LIMIT" in text
+
+
 class GeminiClient(Protocol):
     """Anything that turns a prompt into a raw (hopefully JSON) string."""
 
@@ -171,6 +187,16 @@ def generate_ai_distribution(
         try:
             parsed = parse_response(client.generate(prompt))
         except Exception as exc:  # any client/parse failure is retryable
+            if _is_rate_limited(exc):
+                # Quota exhausted: our short backoff can't outwait the API's
+                # multi-second retryDelay, so retrying here only burns more of
+                # the tiny free-tier budget. Give up now; the task's own
+                # rate_limit paces the next attempt.
+                logger.warning(
+                    "AI estimate rate-limited for pairing %s; skipping retries: %s",
+                    pairing.pk, exc,
+                )
+                return None
             logger.warning(
                 "AI estimate attempt %s/%s failed for pairing %s: %s",
                 attempt, max_attempts, pairing.pk, exc,
