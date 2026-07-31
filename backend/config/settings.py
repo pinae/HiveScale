@@ -175,6 +175,17 @@ GEMINI_RATE_LIMIT = os.environ.get("GEMINI_RATE_LIMIT", "5/m")
 # backfill drips at most this many per run and is re-run daily. Set 0 for no cap.
 GEMINI_BACKFILL_LIMIT = int(os.environ.get("GEMINI_BACKFILL_LIMIT", "20"))
 
+# Scoring: a round rewards two kinds of good guess, weighted then blended into
+# the visible score (and thus XP). Tune the balance without a code change.
+#  - "means"  : how well the guess bell matches the crowd's *mean* placements
+#               (the reveal bar chart);
+#  - "belief" : how well it matches the crowd's *summed* full guesses (the curve).
+# The multiplier is kept/grown when *either* component clears GOOD_MATCH_THRESHOLD.
+XP_MEANS_WEIGHT = float(os.environ.get("XP_MEANS_WEIGHT", "0.5"))
+XP_BELIEF_WEIGHT = float(os.environ.get("XP_BELIEF_WEIGHT", "0.5"))
+ROUND_MAX_POINTS = float(os.environ.get("ROUND_MAX_POINTS", "1000"))
+GOOD_MATCH_THRESHOLD = float(os.environ.get("GOOD_MATCH_THRESHOLD", "0.6"))
+
 # Player level required to unlock Thing/Scale submission (WP-11, plan §1.6).
 CONTENT_SUGGEST_LEVEL = int(os.environ.get("CONTENT_SUGGEST_LEVEL", "10"))
 

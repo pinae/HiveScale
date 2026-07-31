@@ -194,6 +194,23 @@ def test_snapshot_requires_at_least_one_eligible_guess(pairing: Pairing, player:
         recompute_snapshot(pairing)
 
 
+def test_snapshot_belief_histogram_sums_the_full_guesses(pairing: Pairing, player: Player) -> None:
+    # Two camps, each guessing a tight bell -> the summed belief is bimodal and
+    # normalized, distinct from the (also bimodal) histogram of bare means.
+    left = Player.objects.create(device_token="tok-left")
+    for _ in range(5):
+        _make_guess(pairing, player, center=15.0, width_left=4, width_right=4)
+        _make_guess(pairing, left, center=85.0, width_left=4, width_right=4)
+
+    snapshot = recompute_snapshot(pairing)
+    assert len(snapshot.belief_histogram) == 20
+    assert sum(snapshot.belief_histogram) == pytest.approx(1.0)
+    # Mass concentrates in the two camps' buckets (≈15 -> bucket 3, ≈85 -> 17).
+    assert snapshot.belief_histogram[3] > 0.1
+    assert snapshot.belief_histogram[17] > 0.1
+    assert snapshot.belief_histogram[10] < 0.05  # little belief mass in the middle
+
+
 def test_snapshot_updates_pairing_answer_count_and_graduation(
     pairing: Pairing, player: Player
 ) -> None:

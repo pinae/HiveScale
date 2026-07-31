@@ -14,8 +14,13 @@ import { useEffect, useState } from "react";
 
 import type { AiEstimate, RevealPayload } from "../../api/reveal";
 import ScorePanel from "../ScorePanel";
+import { bellGeometry } from "../WaveSlider/normal";
 import { beatMargin, classifyOutcome, pickQuip } from "./reveal-outcome";
+import { histogramCurve } from "./curves";
 import type { GuessValue } from "../WaveSlider";
+
+const CHART_VW = 1000;
+const CHART_VH = 100;
 
 export interface RevealWaveProps {
   reveal: RevealPayload;
@@ -50,11 +55,14 @@ function usePrefersReducedMotion(): boolean {
 
 function HistogramChart({
   histogram,
+  belief,
   guess,
   aiMedian,
   label,
 }: {
   histogram: number[];
+  /** The crowd's summed beliefs, drawn as the orange curve. Empty = skip it. */
+  belief?: number[];
   guess: GuessValue;
   aiMedian?: number;
   label: string;
@@ -62,13 +70,13 @@ function HistogramChart({
   const max = Math.max(...histogram, 1e-9);
   const lower = clamp(guess.center - guess.widthLeft, 0, 100);
   const upper = clamp(guess.center + guess.widthRight, 0, 100);
+  // The player's guess bell (teal), peak-normalized so its shape reads clearly.
+  const bell = bellGeometry(guess, 0, 100, CHART_VW, CHART_VH);
+  // The crowd's summed beliefs (orange), on the same vertical scale as the bars.
+  const beliefCurve =
+    belief && belief.length ? histogramCurve(belief, CHART_VW, CHART_VH, max) : null;
   return (
     <div className="bsg-reveal-chart" role="img" aria-label={label}>
-      <div
-        className="bsg-reveal-interval"
-        style={{ left: `${lower}%`, width: `${upper - lower}%` }}
-        aria-hidden="true"
-      />
       <div className="bsg-reveal-bars">
         {histogram.map((weight, i) => {
           const bucketCenter = (i + 0.5) * 5;
@@ -84,6 +92,22 @@ function HistogramChart({
           );
         })}
       </div>
+      <svg
+        className="bsg-reveal-overlay"
+        data-testid="reveal-overlay"
+        viewBox={`0 0 ${CHART_VW} ${CHART_VH}`}
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        {beliefCurve ? (
+          <>
+            <path className="bsg-reveal-belief-fill" d={beliefCurve.area} />
+            <path className="bsg-reveal-belief-line" d={beliefCurve.line} />
+          </>
+        ) : null}
+        <path className="bsg-reveal-guess-fill" d={bell.area} />
+        <path className="bsg-reveal-guess-line" d={bell.line} />
+      </svg>
       {aiMedian !== undefined ? (
         <div className="bsg-reveal-ai-marker" style={{ left: `${aiMedian}%` }} aria-hidden="true" />
       ) : null}
@@ -135,6 +159,7 @@ function renderHuman(
       ) : null}
       <HistogramChart
         histogram={reveal.crowd.histogram}
+        belief={reveal.crowd.belief_histogram}
         guess={guess}
         aiMedian={aiEstimate ? aiEstimate.median : undefined}
         label="Crowd distribution with your guess"

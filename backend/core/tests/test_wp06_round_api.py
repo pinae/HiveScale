@@ -23,7 +23,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from bglib.scoring import Guess as GuessValue
-from bglib.scoring import SnapshotStats, crps, guess_to_distribution, visible_score
+from bglib.scoring import crps, guess_to_distribution, score_guess_match
 from core import leveling
 from core.models import (
     AIDistribution,
@@ -178,15 +178,17 @@ def test_round_trip_reveal_payload_on_a_graduated_pairing() -> None:
     assert body["source"] == "human"
     assert body["counted"] is True
     assert 0 <= body["score"]["total"] <= 1000
-    assert body["score"]["total"] == pytest.approx(
-        body["score"]["distance_points"] + body["score"]["calibration_points"]
-    )
+    assert 0.0 <= body["score"]["means_match"] <= 1.0
+    assert 0.0 <= body["score"]["belief_match"] <= 1.0
+    assert isinstance(body["score"]["good_match"], bool)
     assert len(body["crowd"]["histogram"]) == 20
+    assert len(body["crowd"]["belief_histogram"]) == 20
     assert body["crowd"]["n"] == snapshot.n
     assert body["crowd"]["median"] == pytest.approx(snapshot.median)
     assert 0 <= body["percentile"] <= 100
     assert isinstance(body["bimodal"], bool)
-    assert body["streak"]["hot"] == 1  # a median hit is a good round
+    # The hot streak extends only when the round clears the good-round threshold.
+    assert body["streak"]["hot"] == (1 if body["score"]["total"] >= GOOD_ROUND_THRESHOLD else 0)
 
     player.refresh_from_db()
     assert player.xp == int(round(body["score"]["total"]))
@@ -218,14 +220,23 @@ def test_round_scores_are_reproducible_from_stored_inputs() -> None:
     player = _session(client)
     _submit(client, _slow_token(pairing, player), center=61.0, wl=9.0, wr=17.0)
 
+    from django.conf import settings
+
     stored = RoundScore.objects.get(guess__player=player)
     guess = stored.guess
     snapshot = DistributionSnapshot.objects.get(pk=stored.components["snapshot_id"])
     value = GuessValue(guess.center, guess.width_left, guess.width_right)
-    recomputed = visible_score(
-        value, SnapshotStats(median=snapshot.median, q25=snapshot.q25, q75=snapshot.q75)
+    recomputed = score_guess_match(
+        value,
+        tuple(snapshot.histogram),
+        tuple(snapshot.belief_histogram),
+        weight_means=settings.XP_MEANS_WEIGHT,
+        weight_belief=settings.XP_BELIEF_WEIGHT,
+        max_points=settings.ROUND_MAX_POINTS,
     )
     assert stored.visible_points == pytest.approx(recomputed.total)
+    assert stored.components["means_match"] == pytest.approx(recomputed.means_match)
+    assert stored.components["belief_match"] == pytest.approx(recomputed.belief_match)
     assert stored.crps == pytest.approx(
         crps(guess_to_distribution(value), tuple(snapshot.histogram))
     )
@@ -308,8 +319,7 @@ def test_multiplier_multiplies_banked_xp_for_a_leveled_player() -> None:
 
     player.refresh_from_db()
     assert player.xp - before == int(round(body["score"]["total"] * 3))  # ×3 applied
-    covered = body["score"]["covered_fraction"]
-    expected = 4 if covered >= leveling.OVERLAP_TO_ADVANCE and not body["bimodal"] else 1
+    expected = 4 if body["score"]["good_match"] and not body["bimodal"] else 1
     assert body["player"]["multiplier"] == expected
     assert body["player"]["level"] == player.level
     assert body["progress"]["level"] == player.level

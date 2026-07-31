@@ -26,8 +26,8 @@ const roundB = {
 const humanReveal = (counted = true) => ({
   source: "human",
   counted,
-  score: { total: 812, distance_points: 560, calibration_points: 252, covered_fraction: 0.7 },
-  crowd: { histogram: Array(20).fill(0.05), median: 52, q25: 44, q75: 60, n: 30 },
+  score: { total: 812, means_match: 0.72, belief_match: 0.66, good_match: true },
+  crowd: { histogram: Array(20).fill(0.05), belief_histogram: Array(20).fill(0.05), median: 52, q25: 44, q75: 60, n: 30 },
   percentile: 76,
   bimodal: false,
   streak: { hot: counted ? 3 : 0 },

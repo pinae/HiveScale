@@ -184,10 +184,17 @@ class Guess(models.Model):
 
 
 class DistributionSnapshot(models.Model):
-    """Cached human-baseline used as the scoring target (plan §1.7)."""
+    """Cached human-baseline used as the scoring target (plan §1.7).
+
+    ``histogram`` is the distribution of players' *mean* placements (the reveal's
+    bar chart). ``belief_histogram`` sums every player's full split-normal guess
+    into a smooth aggregate belief — the reveal's overlaid curve — so a guess can
+    be scored against both the crowd's means and its uncertainty-aware beliefs.
+    """
 
     pairing = models.ForeignKey(Pairing, on_delete=models.CASCADE, related_name="snapshots")
     histogram = models.JSONField()
+    belief_histogram = models.JSONField(default=list, blank=True)
     median = models.FloatField()
     q25 = models.FloatField()
     q75 = models.FloatField()

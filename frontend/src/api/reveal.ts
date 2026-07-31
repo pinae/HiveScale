@@ -5,7 +5,10 @@
  */
 
 export interface CrowdStats {
+  /** Distribution of players' *mean* placements — the reveal's bar chart. */
   histogram: number[];
+  /** Sum of every player's full split-normal guess — the reveal's overlaid curve. */
+  belief_histogram: number[];
   median: number;
   q25: number;
   q75: number;
@@ -14,9 +17,12 @@ export interface CrowdStats {
 
 export interface ScoreBreakdown {
   total: number;
-  distance_points: number;
-  calibration_points: number;
-  covered_fraction: number;
+  /** Overlap (0-1) of the guess bell with the crowd's mean placements. */
+  means_match: number;
+  /** Overlap (0-1) of the guess bell with the crowd's summed beliefs. */
+  belief_match: number;
+  /** Whether either component cleared the good-match threshold (keeps the multiplier). */
+  good_match: boolean;
 }
 
 export interface AiEstimate {

@@ -1,6 +1,6 @@
 /**
  * The score panel of the reveal (WP-09): an outcome quip, the count-up total,
- * its distance/calibration breakdown, and the percentile stinger.
+ * its means-match / belief-match breakdown, and the percentile stinger.
  */
 import { useEffect, useState } from "react";
 
@@ -57,12 +57,12 @@ export default function ScorePanel({
       </output>
       <dl className="bsg-score-breakdown">
         <div>
-          <dt>Distance</dt>
-          <dd>{Math.round(score.distance_points)}</dd>
+          <dt>Means match</dt>
+          <dd>{Math.round(score.means_match * 100)}%</dd>
         </div>
         <div>
-          <dt>Calibration</dt>
-          <dd>{Math.round(score.calibration_points)}</dd>
+          <dt>Belief match</dt>
+          <dd>{Math.round(score.belief_match * 100)}%</dd>
         </div>
       </dl>
       <p className="bsg-score-percentile">

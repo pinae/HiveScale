@@ -2,9 +2,9 @@
 
 Executable spec:
 - levels come from cumulative XP with sharply widening steps (L5 is a wall);
-- the multiplier unlocks at level 2, climbs on ≥70%-covered graduated rounds to
-  a ×10 cap, is neutral on bimodal ("society at war") rounds, and resets on a
-  poorly-covered round;
+- the multiplier unlocks at level 2, climbs on good-match graduated rounds to a
+  ×10 cap, is neutral on bimodal ("society at war") rounds, and resets on a
+  poor-match round;
 - XP banked per round is the visible score times the effective multiplier.
 """
 
@@ -59,35 +59,35 @@ def test_multiplier_is_locked_below_level_two():
     assert leveling.effective_multiplier(1, 7) == 1
     assert leveling.effective_multiplier(2, 7) == 7
     assert (
-        leveling.next_multiplier(1, level=1, source="human", bimodal=False, covered_fraction=0.9)
+        leveling.next_multiplier(1, level=1, source="human", bimodal=False, good_match=True)
         == 1
     )
 
 
-def test_multiplier_climbs_on_well_covered_rounds_and_caps():
+def test_multiplier_climbs_on_good_match_rounds_and_caps():
     assert (
-        leveling.next_multiplier(1, level=2, source="human", bimodal=False, covered_fraction=0.71)
+        leveling.next_multiplier(1, level=2, source="human", bimodal=False, good_match=True)
         == 2
     )
     assert (
-        leveling.next_multiplier(10, level=6, source="human", bimodal=False, covered_fraction=0.99)
+        leveling.next_multiplier(10, level=6, source="human", bimodal=False, good_match=True)
         == 10
     )
 
 
-def test_multiplier_resets_on_a_poorly_covered_round():
+def test_multiplier_resets_on_a_poor_match_round():
     assert (
-        leveling.next_multiplier(6, level=5, source="human", bimodal=False, covered_fraction=0.5)
+        leveling.next_multiplier(6, level=5, source="human", bimodal=False, good_match=False)
         == 1
     )
 
 
 def test_bimodal_and_pioneer_rounds_are_neutral():
     assert (
-        leveling.next_multiplier(4, level=5, source="human", bimodal=True, covered_fraction=0.9)
+        leveling.next_multiplier(4, level=5, source="human", bimodal=True, good_match=True)
         == 4
     )
     assert (
-        leveling.next_multiplier(4, level=5, source="pioneer", bimodal=False, covered_fraction=None)
+        leveling.next_multiplier(4, level=5, source="pioneer", bimodal=False, good_match=None)
         == 4
     )

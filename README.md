@@ -94,13 +94,32 @@ too-fast rounds still reveal but earn nothing). Per round:
 XP gained = round(visible_score × effective_multiplier)
 ```
 
-- **`visible_score`** is the round's 0–1000 score (distance to the crowd median +
-  interval calibration), or a flat **550 pioneer bonus** on an ungraduated pairing.
+- **`visible_score`** is the round's 0–1000 score — a blend of two *distribution
+  matches* (see below) — or a flat **550 pioneer bonus** on an ungraduated pairing.
 - **`effective_multiplier`** is the player's current multiplier — but **×1 until
   level 2**, so brand-new players always earn face value.
 - **Thing challenges** (level 10) pay a flat **25,000 XP** — ten normal rounds at a
   ×5 multiplier — on top of the round loop. Pairing votes and scale requests are
   curation, not scored, so they grant no XP.
+
+### Scoring: two ways to be right
+
+A player guesses a **whole distribution** — a mean and a left/right standard
+deviation, i.e. the split-normal bell they shape on the `WaveSlider`. A graduated
+round scores that bell against the crowd two ways, each an *overlap* in 0–1
+(`1 = identical`, `0 = disjoint`):
+
+- **Means match** — overlap with the distribution of other players' **mean**
+  placements (the reveal's bar chart). Did you find where people land?
+- **Belief match** — overlap with the crowd's **summed full guesses** (every
+  player's own bell added up — the reveal's orange curve). Did you match what
+  people *believe*, uncertainty and all?
+
+The visible score is `ROUND_MAX_POINTS × (w_means·means_match + w_belief·belief_match) / (w_means + w_belief)`.
+The two weights (`XP_MEANS_WEIGHT`, `XP_BELIEF_WEIGHT`, both `0.5` by default) and
+`ROUND_MAX_POINTS` (1000) are settings, so the balance is tunable without a code
+change. Matching the tight means and the wide belief pulls in opposite directions,
+so a good guess strikes a balance.
 
 ### The calibration multiplier (×1 → ×10)
 
@@ -109,13 +128,14 @@ each **graduated** ("human") round:
 
 | Round outcome | Effect on the multiplier |
 | --- | --- |
-| Interval covers **≥ 70%** of the crowd | **+1** (capped at ×10) |
-| Interval covers **< 70%** | **resets to ×1** |
+| **Good match** — either component clears `GOOD_MATCH_THRESHOLD` (0.6) | **+1** (capped at ×10) |
+| Neither component clears it | **resets to ×1** |
 | Crowd is **bimodal** ("society at war") | **unchanged** (neutral) |
 | Pioneer round / too-fast | **unchanged** |
 
-Because XP = score × multiplier, a long chain of well-calibrated rounds is worth
-far more than the same number of sloppy ones — the intended path to level 5.
+You keep your multiplier if *either* kind of guess was good, so both skills are
+worth cultivating. Because XP = score × multiplier, a long chain of well-matched
+rounds is worth far more than the same number of sloppy ones — the path to level 5.
 
 ### The level curve
 
@@ -454,6 +474,12 @@ half-bell leaning on it — the natural shape of a decided crowd. The backend sc
 the *same* truncated split-normal (`bglib.scoring.SplitNormalDist`), so players are
 scored on the shape they see; off-scale tail mass is renormalized back in rather
 than lost.
+
+The **reveal** then layers three things over one chart so the player can compare
+directly: the crowd's **mean placements** as bars, the crowd's **summed beliefs**
+(every player's bell added up) as a smooth **orange** curve, and the player's own
+guess bell in **teal** — plus a white mean line. The two match percentages in the
+score panel say how well the teal bell overlapped the bars and the orange curve.
 
 Every primitive also lives in Storybook with a story per state (idle, narrow, wide,
 asymmetric, disabled, RTL, mobile, each reveal outcome): `cd frontend && yarn storybook`.

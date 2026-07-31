@@ -17,8 +17,8 @@ const crowdHistogram = Array.from({ length: 20 }, (_, i) => (i >= 8 && i <= 12 ?
 const humanReveal: HumanReveal = {
   source: "human",
   counted: true,
-  score: { total: 853, distance_points: 600, calibration_points: 253, covered_fraction: 0.71 },
-  crowd: { histogram: crowdHistogram, median: 52, q25: 41, q75: 64, n: 23 },
+  score: { total: 853, means_match: 0.78, belief_match: 0.71, good_match: true },
+  crowd: { histogram: crowdHistogram, belief_histogram: crowdHistogram, median: 52, q25: 41, q75: 64, n: 23 },
   percentile: 83,
   bimodal: false,
   streak: { hot: 3 },
@@ -55,6 +55,20 @@ describe("RevealWave (human)", () => {
   it("renders the 20-bucket crowd histogram", () => {
     render(<RevealWave reveal={humanReveal} guess={guess} animate={false} />);
     expect(screen.getAllByTestId("reveal-hist-bar")).toHaveLength(20);
+  });
+
+  it("overlays the player's guess bell and the crowd's summed-belief curve", () => {
+    const { container } = render(<RevealWave reveal={humanReveal} guess={guess} animate={false} />);
+    const overlay = container.querySelector('[data-testid="reveal-overlay"]')!;
+    expect(overlay.querySelector(".bsg-reveal-guess-line")).toBeTruthy(); // teal guess bell
+    expect(overlay.querySelector(".bsg-reveal-belief-line")).toBeTruthy(); // orange belief curve
+  });
+
+  it("omits the belief curve when the crowd has none yet", () => {
+    const noBelief: HumanReveal = { ...humanReveal, crowd: { ...humanReveal.crowd, belief_histogram: [] } };
+    const { container } = render(<RevealWave reveal={noBelief} guess={guess} animate={false} />);
+    expect(container.querySelector(".bsg-reveal-belief-line")).toBeNull();
+    expect(container.querySelector(".bsg-reveal-guess-line")).toBeTruthy(); // bell still drawn
   });
 
   it("celebrates bimodality only when the crowd is split", () => {

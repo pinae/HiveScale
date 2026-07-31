@@ -31,7 +31,10 @@ from bglib.scoring import (
     crps,
     detect_bimodality,
     guess_to_distribution,
+    histogram_overlap,
     quantile_from_histogram,
+    score_guess_match,
+    split_normal_histogram,
     visible_score,
 )
 
@@ -133,6 +136,52 @@ def test_crps_is_non_negative(guess: Guess, hist: tuple[float, ...]) -> None:
 def test_crps_is_zero_exactly_at_the_true_distribution(hist: tuple[float, ...]) -> None:
     """Forecasting the crowd's own CDF is the unique perfect forecast."""
     assert crps(HistogramDist(hist), hist) == pytest.approx(0.0, abs=1e-9)
+
+
+# ---------------------------------------------------------------------------
+# Match scoring (means vs. belief overlap)
+# ---------------------------------------------------------------------------
+
+
+def test_split_normal_histogram_is_a_normalized_distribution() -> None:
+    hist = split_normal_histogram(50, 10, 10)
+    assert len(hist) == N_BUCKETS
+    assert sum(hist) == pytest.approx(1.0)
+    # Symmetric around the centre and peaked there.
+    assert hist[9] == pytest.approx(hist[10], abs=1e-9)
+    assert max(hist) in (hist[9], hist[10])
+
+
+def test_histogram_overlap_bounds() -> None:
+    a = split_normal_histogram(30, 8, 8)
+    assert histogram_overlap(a, a) == pytest.approx(1.0)  # identical -> full overlap
+    far = split_normal_histogram(90, 3, 3)
+    assert histogram_overlap(split_normal_histogram(10, 3, 3), far) < 0.05  # disjoint
+
+
+def test_score_match_rewards_matching_the_crowd() -> None:
+    crowd = split_normal_histogram(50, 12, 12)  # pretend the crowd clusters here
+    spot_on = score_guess_match(Guess(50, 12, 12), crowd, crowd)
+    off = score_guess_match(Guess(15, 4, 4), crowd, crowd)
+    assert spot_on.total > off.total
+    assert spot_on.means_match == pytest.approx(1.0)
+    assert 0 <= off.total <= 1000
+
+
+def test_score_match_blends_the_two_components_by_weight() -> None:
+    means = split_normal_histogram(40, 10, 10)
+    belief = split_normal_histogram(60, 10, 10)
+    guess = Guess(40, 10, 10)  # matches means, not belief
+    means_only = score_guess_match(guess, means, belief, weight_means=1.0, weight_belief=0.0)
+    belief_only = score_guess_match(guess, means, belief, weight_means=0.0, weight_belief=1.0)
+    assert means_only.total > belief_only.total  # weighting toward means scores higher here
+    assert means_only.total == pytest.approx(1000 * means_only.means_match)
+
+
+def test_score_match_falls_back_to_means_without_a_belief_histogram() -> None:
+    means = split_normal_histogram(50, 10, 10)
+    match = score_guess_match(Guess(50, 10, 10), means, None)
+    assert match.belief_match == pytest.approx(match.means_match)
 
 
 @given(histograms())

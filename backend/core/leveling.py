@@ -7,10 +7,11 @@ Two knobs drive the whole progression system (plan §2.x, contribution unlocks):
   sharply, so the early levels come fast but L5 takes real, *calibrated* play.
 
 * **The XP multiplier** rewards calibrated guessing. From level 2 it climbs by one
-  each time a graduated round covers ≥70% of the crowd, up to ×10, and resets on a
-  poorly-covered round. A "society at war" (bimodal) round is neutral. XP earned is
-  the round's visible score times the multiplier, so a heavy player only reaches L5
-  inside a fortnight by sustaining a high multiplier — not by grinding volume.
+  each time a graduated round is a *good match* — the guess clears the match
+  threshold on either the crowd's means or its summed beliefs — up to ×10, and
+  resets on a poor round. A "society at war" (bimodal) round is neutral. XP earned
+  is the round's visible score times the multiplier, so a heavy player only reaches
+  L5 inside a fortnight by sustaining a high multiplier — not by grinding volume.
 
 All numbers are tunable; keep ``LEVEL_THRESHOLDS`` strictly increasing.
 """
@@ -40,7 +41,6 @@ LEVEL_THRESHOLDS: list[int] = [
 _TAIL_STEP = LEVEL_THRESHOLDS[-1] - LEVEL_THRESHOLDS[-2]
 
 MAX_MULTIPLIER = 10
-OVERLAP_TO_ADVANCE = 0.70
 #: The multiplier (and its rewards) only apply from this level up.
 MULTIPLIER_MIN_LEVEL = 2
 
@@ -88,18 +88,19 @@ def next_multiplier(
     level: int,
     source: str,
     bimodal: bool,
-    covered_fraction: float | None,
+    good_match: bool | None,
 ) -> int:
     """The XP multiplier for the player's *next* round after this one resolves.
 
     Only graduated ("human") rounds move it, and only once unlocked. A bimodal
-    round is neutral; a ≥70%-covered round grows it (capped); anything less
-    resets it to 1.
+    round is neutral; a good-match round grows it (capped); anything less resets
+    it to 1. ``good_match`` is ``None`` when the round can't move the multiplier
+    (pioneer rounds), in which case it's left unchanged.
     """
     if level < MULTIPLIER_MIN_LEVEL:
         return 1
-    if source != "human" or bimodal or covered_fraction is None:
+    if source != "human" or bimodal or good_match is None:
         return current
-    if covered_fraction >= OVERLAP_TO_ADVANCE:
+    if good_match:
         return min(MAX_MULTIPLIER, current + 1)
     return 1

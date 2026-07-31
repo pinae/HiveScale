@@ -273,6 +273,80 @@ def visible_score(guess: Guess, snapshot: SnapshotStats) -> ScoreBreakdown:
     )
 
 
+#: Default ceiling for a single round's visible match score.
+ROUND_MAX_POINTS = 1000.0
+
+
+def split_normal_histogram(
+    center: float, width_left: float, width_right: float
+) -> tuple[float, ...]:
+    """Discretize a guess's truncated split-normal into ``N_BUCKETS`` masses.
+
+    The masses sum to 1 (the bell is renormalized onto the scale), so the result
+    is directly comparable to the crowd's normalized histograms.
+    """
+    dist = SplitNormalDist(center, width_left, width_right)
+    edges = [i * BUCKET_WIDTH for i in range(N_BUCKETS + 1)]
+    cdfs = [dist.cdf(edge) for edge in edges]
+    return tuple(cdfs[i + 1] - cdfs[i] for i in range(N_BUCKETS))
+
+
+def histogram_overlap(a: Sequence[float], b: Sequence[float]) -> float:
+    """Overlapping mass ``Σ min(a_i, b_i)`` of two normalized histograms.
+
+    Ranges 0 (disjoint) to 1 (identical); equivalently ``1 − total_variation``.
+    Symmetric, bounded, and needs no softness constant to tune — a clean
+    "how much of the two distributions coincide" quality.
+    """
+    return sum(min(x, y) for x, y in zip(a, b, strict=True))
+
+
+@dataclass(frozen=True, slots=True)
+class MatchBreakdown:
+    """Two ways a guess can be right, plus the weighted visible total.
+
+    - ``means_match`` — overlap of the guess bell with the crowd's distribution of
+      *mean* placements (the reveal's bar chart): did you find where people land?
+    - ``belief_match`` — overlap with the crowd's *summed* full guesses (every
+      player's own bell, uncertainty included): did you match what people believe?
+    """
+
+    means_match: float
+    belief_match: float
+    total: float
+
+
+def score_guess_match(
+    guess: Guess,
+    means_histogram: Sequence[float],
+    belief_histogram: Sequence[float] | None,
+    *,
+    weight_means: float = 0.5,
+    weight_belief: float = 0.5,
+    max_points: float = ROUND_MAX_POINTS,
+) -> MatchBreakdown:
+    """Score a guess by how well its bell overlaps the two crowd distributions.
+
+    Each component is an overlap in ``[0, 1]``; the visible total is their
+    weighted blend scaled to ``max_points``. If no belief histogram exists yet
+    (e.g. a just-graduated pairing), the belief component falls back to the means
+    overlap so the blend stays well-defined.
+    """
+    _validate_guess(guess)
+    guess_hist = split_normal_histogram(guess.center, guess.width_left, guess.width_right)
+    means_match = histogram_overlap(guess_hist, means_histogram)
+    belief_match = (
+        histogram_overlap(guess_hist, belief_histogram) if belief_histogram else means_match
+    )
+    denom = weight_means + weight_belief or 1.0
+    quality = (weight_means * means_match + weight_belief * belief_match) / denom
+    return MatchBreakdown(
+        means_match=means_match,
+        belief_match=belief_match,
+        total=max_points * quality,
+    )
+
+
 def calibration_update(
     stats: CalibrationStats, guess: Guess, snapshot: SnapshotStats
 ) -> CalibrationStats:

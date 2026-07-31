@@ -26,10 +26,10 @@ export const handlers = [
       "source": "human",
       "counted": true,
       "score": {
-        "total": 853.7,
-        "distance_points": 600,
-        "calibration_points": 253.7,
-        "covered_fraction": 0.71
+        "total": 712,
+        "means_match": 0.74,
+        "belief_match": 0.68,
+        "good_match": true
       },
       "crowd": {
         "histogram": [
@@ -53,6 +53,28 @@ export const handlers = [
           0,
           0,
           0
+        ],
+        "belief_histogram": [
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.14,
+          0.18,
+          0.18,
+          0.14,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02
         ],
         "median": 52.5,
         "q25": 41.1,

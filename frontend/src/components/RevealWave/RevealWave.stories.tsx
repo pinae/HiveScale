@@ -42,8 +42,8 @@ function human(overrides: Partial<HumanReveal> = {}): HumanReveal {
   return {
     source: "human",
     counted: true,
-    score: { total: 812, distance_points: 560, calibration_points: 252, covered_fraction: 0.68 },
-    crowd: { histogram: hist(10), median: 52, q25: 44, q75: 60, n: 41 },
+    score: { total: 812, means_match: 0.79, belief_match: 0.68, good_match: true },
+    crowd: { histogram: hist(10), belief_histogram: hist(10, 6), median: 52, q25: 44, q75: 60, n: 41 },
     percentile: 78,
     bimodal: false,
     streak: { hot: 3 },
@@ -76,7 +76,7 @@ export const Nailed: Story = {
 export const ConfidentlyWrong: Story = {
   args: {
     reveal: human({
-      score: { total: 214, distance_points: 90, calibration_points: 124, covered_fraction: 0.3 },
+      score: { total: 214, means_match: 0.22, belief_match: 0.19, good_match: false },
       percentile: 21,
     }),
     guess: { center: 82, widthLeft: 5, widthRight: 5 },
@@ -100,7 +100,14 @@ export const Contrarian: Story = {
 
 export const BimodalDrama: Story = {
   args: {
-    reveal: human({ bimodal: true, crowd: { histogram: hist(4, 15), median: 50, q25: 22, q75: 76, n: 63 } }),
+    reveal: human({
+      bimodal: true,
+      crowd: {
+        histogram: hist(4, 15),
+        belief_histogram: hist(4, 18),
+        median: 50, q25: 22, q75: 76, n: 63,
+      },
+    }),
     guess: { center: 30, widthLeft: 12, widthRight: 12 },
   },
 };

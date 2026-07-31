@@ -8,9 +8,9 @@ import ScorePanel from "./ScorePanel";
 
 const score = {
   total: 853,
-  distance_points: 600,
-  calibration_points: 253,
-  covered_fraction: 0.71,
+  means_match: 0.78,
+  belief_match: 0.71,
+  good_match: true,
 };
 
 describe("ScorePanel", () => {
@@ -25,9 +25,9 @@ describe("ScorePanel", () => {
       />,
     );
     expect(screen.getByTestId("reveal-score-total")).toHaveTextContent("853");
-    expect(screen.getByText(/600/)).toBeInTheDocument();
-    expect(screen.getByText(/253/)).toBeInTheDocument();
-    expect(screen.getByText(/83%/)).toBeInTheDocument();
+    expect(screen.getByText(/78%/)).toBeInTheDocument(); // means match
+    expect(screen.getByText(/71%/)).toBeInTheDocument(); // belief match
+    expect(screen.getByText(/83%/)).toBeInTheDocument(); // percentile
     expect(screen.getByText("Bullseye.")).toBeInTheDocument();
   });
 });

@@ -7,7 +7,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from bglib.scoring import build_histogram, weighted_quantile
+from bglib.scoring import N_BUCKETS, build_histogram, split_normal_histogram, weighted_quantile
 from core.models import DistributionSnapshot, Pairing, Player
 
 #: Answers submitted faster than this are stored but never enter the baseline
@@ -43,16 +43,21 @@ def recompute_snapshot(pairing: Pairing) -> DistributionSnapshot:
     maintains ``pairing.n_answers`` and stamps ``graduated_at`` (permanently)
     once ``N_MIN_GRADUATION`` eligible answers exist.
     """
-    rows = list(eligible_guesses(pairing).values_list("center", "player__weight"))
+    rows = list(
+        eligible_guesses(pairing).values_list(
+            "center", "width_left", "width_right", "player__weight"
+        )
+    )
     if not rows:
         raise ValueError(f"pairing {pairing.pk} has no eligible guesses to snapshot")
 
-    centers = [center for center, _ in rows]
-    weights = [weight for _, weight in rows]
+    centers = [center for center, _, _, _ in rows]
+    weights = [weight for _, _, _, weight in rows]
 
     snapshot = DistributionSnapshot.objects.create(
         pairing=pairing,
         histogram=list(build_histogram(centers, weights)),
+        belief_histogram=_belief_histogram(rows),
         median=weighted_quantile(centers, weights, 0.5),
         q25=weighted_quantile(centers, weights, 0.25),
         q75=weighted_quantile(centers, weights, 0.75),
@@ -64,6 +69,21 @@ def recompute_snapshot(pairing: Pairing) -> DistributionSnapshot:
         pairing.graduated_at = timezone.now()
     pairing.save(update_fields=["n_answers", "graduated_at"])
     return snapshot
+
+
+def _belief_histogram(rows: list[tuple[float, float, float, float]]) -> list[float]:
+    """Weighted average of every eligible guess's split-normal, as a normalized
+    ``N_BUCKETS`` histogram — the crowd's *summed beliefs* (the reveal's curve)."""
+    belief = [0.0] * N_BUCKETS
+    total_weight = 0.0
+    for center, width_left, width_right, weight in rows:
+        guess_hist = split_normal_histogram(center, width_left, width_right)
+        for i, mass in enumerate(guess_hist):
+            belief[i] += weight * mass
+        total_weight += weight
+    if total_weight <= 0:
+        return []
+    return [b / total_weight for b in belief]
 
 
 # ---------------------------------------------------------------------------

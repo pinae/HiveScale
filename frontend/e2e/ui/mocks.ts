@@ -24,12 +24,20 @@ export const roundB = {
 const crowdHistogram = Array.from({ length: 20 }, (_, i) =>
   Math.exp(-((i - 10) ** 2) / 6),
 );
+/** The crowd's summed beliefs: a wider, smoother version of the means. */
+const beliefHistogram = Array.from({ length: 20 }, (_, i) =>
+  Math.exp(-((i - 10) ** 2) / 16),
+);
 
 export const humanReveal = (counted = true) => ({
   source: "human" as const,
   counted,
-  score: { total: 812, distance_points: 560, calibration_points: 252, covered_fraction: 0.7 },
-  crowd: { histogram: crowdHistogram, median: 52, q25: 44, q75: 60, n: 30 },
+  score: { total: 812, means_match: 0.74, belief_match: 0.68, good_match: true },
+  crowd: {
+    histogram: crowdHistogram,
+    belief_histogram: beliefHistogram,
+    median: 52, q25: 44, q75: 60, n: 30,
+  },
   percentile: 76,
   bimodal: false,
   streak: { hot: counted ? 3 : 0 },

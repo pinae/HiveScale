@@ -33,7 +33,7 @@ from bglib.scoring import (
     crps,
     detect_bimodality,
     guess_to_distribution,
-    visible_score,
+    score_guess_match,
 )
 from bglib.scoring import Guess as GuessValue
 from core import leveling, voting
@@ -146,13 +146,14 @@ def next_round(request) -> Response:
                 "source": "human",
                 "counted": True,
                 "score": {
-                    "total": 853.7,
-                    "distance_points": 600.0,
-                    "calibration_points": 253.7,
-                    "covered_fraction": 0.71,
+                    "total": 712.0,
+                    "means_match": 0.74,
+                    "belief_match": 0.68,
+                    "good_match": True,
                 },
                 "crowd": {
                     "histogram": [0.0] * 8 + [0.2, 0.3, 0.3, 0.2] + [0.0] * 8,
+                    "belief_histogram": [0.01] * 8 + [0.14, 0.18, 0.18, 0.14] + [0.02] * 8,
                     "median": 52.5,
                     "q25": 41.1,
                     "q75": 63.8,
@@ -282,7 +283,7 @@ def _apply_progression(player, body: dict) -> None:
     """Bank a counted round's XP (times the multiplier), re-level, and roll the
     multiplier for the next round (plan progression)."""
     visible = body["score"]["total"] if body["source"] == "human" else body["pioneer_bonus"]
-    covered = body["score"]["covered_fraction"] if body["source"] == "human" else None
+    good_match = body["score"]["good_match"] if body["source"] == "human" else None
 
     effective = leveling.effective_multiplier(player.level, player.xp_multiplier)
     player.xp += int(round(visible * effective))
@@ -292,7 +293,7 @@ def _apply_progression(player, body: dict) -> None:
         level=player.level,
         source=body["source"],
         bimodal=bool(body.get("bimodal", False)),
-        covered_fraction=covered,
+        good_match=good_match,
     )
     player.save(update_fields=["xp", "level", "xp_multiplier"])
 
@@ -312,20 +313,32 @@ def _percentile(pairing, value, snapshot) -> float | None:
 
 
 def _human_reveal(player, guess, value, snapshot, percentile, counted) -> dict:
+    from django.conf import settings
+
     stats = SnapshotStats(median=snapshot.median, q25=snapshot.q25, q75=snapshot.q75)
-    breakdown = visible_score(value, stats)
-    histogram = tuple(snapshot.histogram)
-    hidden_crps = crps(guess_to_distribution(value), histogram)
+    means_hist = tuple(snapshot.histogram)
+    belief_hist = tuple(snapshot.belief_histogram or ())
+
+    match = score_guess_match(
+        value,
+        means_hist,
+        belief_hist,
+        weight_means=settings.XP_MEANS_WEIGHT,
+        weight_belief=settings.XP_BELIEF_WEIGHT,
+        max_points=settings.ROUND_MAX_POINTS,
+    )
+    good_match = max(match.means_match, match.belief_match) >= settings.GOOD_MATCH_THRESHOLD
+    hidden_crps = crps(guess_to_distribution(value), means_hist)
 
     RoundScore.objects.create(
         guess=guess,
-        visible_points=breakdown.total,
+        visible_points=match.total,
         crps=hidden_crps,
         components={
             "snapshot_id": snapshot.pk,
-            "distance_points": breakdown.distance_points,
-            "calibration_points": breakdown.calibration_points,
-            "covered_fraction": breakdown.covered_fraction,
+            "means_match": match.means_match,
+            "belief_match": match.belief_match,
+            "good_match": good_match,
             "percentile": percentile,
             "pioneer": False,
             "counted": counted,
@@ -334,9 +347,10 @@ def _human_reveal(player, guess, value, snapshot, percentile, counted) -> dict:
 
     if counted:
         # XP + level + multiplier are applied centrally in _apply_progression;
-        # here we only fold the streak and the running calibration curve.
+        # here we only fold the streak and the running calibration curve (the
+        # calibration record still drives the stats-page archetypes).
         player.hot_streak = (
-            player.hot_streak + 1 if breakdown.total >= GOOD_ROUND_THRESHOLD else 0
+            player.hot_streak + 1 if match.total >= GOOD_ROUND_THRESHOLD else 0
         )
         current = CalibrationStats(
             n=int(player.calibration_stats.get("n", 0)),
@@ -355,20 +369,21 @@ def _human_reveal(player, guess, value, snapshot, percentile, counted) -> dict:
         "source": "human",
         "counted": counted,
         "score": {
-            "total": breakdown.total,
-            "distance_points": breakdown.distance_points,
-            "calibration_points": breakdown.calibration_points,
-            "covered_fraction": breakdown.covered_fraction,
+            "total": match.total,
+            "means_match": match.means_match,
+            "belief_match": match.belief_match,
+            "good_match": good_match,
         },
         "crowd": {
-            "histogram": list(histogram),
+            "histogram": list(means_hist),
+            "belief_histogram": list(belief_hist),
             "median": snapshot.median,
             "q25": snapshot.q25,
             "q75": snapshot.q75,
             "n": snapshot.n,
         },
         "percentile": percentile,
-        "bimodal": detect_bimodality(histogram).is_bimodal,
+        "bimodal": detect_bimodality(means_hist).is_bimodal,
     }
 
 

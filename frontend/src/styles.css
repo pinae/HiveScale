@@ -237,12 +237,39 @@ body {
   padding-top: 8px;
 }
 
-.bsg-reveal-interval {
+/* Overlay: the crowd's summed beliefs (orange curve) and the player's own guess
+   bell (teal), drawn over the mean-placement bars so they can be compared. */
+.bsg-reveal-overlay {
   position: absolute;
-  inset-block: 0;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--bsg-wave) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--bsg-wave) 45%, transparent);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.bsg-reveal-belief-fill {
+  fill: color-mix(in srgb, var(--bsg-accent) 14%, transparent);
+}
+
+.bsg-reveal-belief-line {
+  fill: none;
+  stroke: var(--bsg-accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.bsg-reveal-guess-fill {
+  fill: color-mix(in srgb, var(--bsg-wave) 18%, transparent);
+}
+
+.bsg-reveal-guess-line {
+  fill: none;
+  stroke: var(--bsg-wave);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .bsg-reveal-bars {

@@ -21,8 +21,8 @@ const slot = (index: number) => ({
 const reveal = (wave: unknown) => ({
   source: "human",
   counted: true,
-  score: { total: 800, distance_points: 500, calibration_points: 300, covered_fraction: 0.7 },
-  crowd: { histogram: Array(20).fill(0.05), median: 50, q25: 42, q75: 58, n: 30 },
+  score: { total: 800, means_match: 0.7, belief_match: 0.64, good_match: true },
+  crowd: { histogram: Array(20).fill(0.05), belief_histogram: Array(20).fill(0.05), median: 50, q25: 42, q75: 58, n: 30 },
   percentile: 70,
   bimodal: false,
   streak: { hot: 1 },
