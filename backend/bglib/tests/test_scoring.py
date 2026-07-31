@@ -93,17 +93,21 @@ def test_guess_distribution_cdf_is_a_cdf(guess: Guess) -> None:
         previous = value
 
 
-def test_zero_width_guess_gets_minimal_support_not_a_crash() -> None:
+def test_zero_width_guess_gets_a_sharp_finite_bell_not_a_crash() -> None:
     dist = guess_to_distribution(Guess(center=50, width_left=0, width_right=0))
-    assert dist.cdf(49) == 0.0
-    assert dist.cdf(51) == 1.0
-    assert 0.0 < dist.cdf(50) < 1.0
+    # Floored sigma -> a sharp, symmetric, finite bell centred at 50.
+    assert dist.cdf(50) == pytest.approx(0.5)
+    assert 0.0 < dist.cdf(49) < 0.5 < dist.cdf(51) < 1.0
+    assert dist.cdf(45) < dist.cdf(49)  # further out, less mass below
 
 
-def test_support_is_clamped_to_scale_bounds() -> None:
+def test_mass_is_renormalized_onto_the_scale_at_an_extreme() -> None:
+    # Centre pinned near the left wall: the left tail is truncated, so almost all
+    # the (renormalized) mass sits to the right of the mode — a decided half-bell.
     dist = guess_to_distribution(Guess(center=2, width_left=50, width_right=50))
     assert dist.cdf(0) == 0.0  # nothing below the scale
-    assert dist.cdf(52) == 1.0  # right edge clamped to center + width
+    assert dist.cdf(100) == 1.0  # all mass fits on the scale (renormalized)
+    assert dist.cdf(2) < 0.1  # only a sliver of mass below the mode at the wall
 
 
 @pytest.mark.parametrize(

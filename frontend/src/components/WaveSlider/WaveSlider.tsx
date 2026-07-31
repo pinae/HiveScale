@@ -2,22 +2,24 @@
  * WaveSlider (WP-08): the one-thumb guess control.
  *
  * A player places a Thing on a 0-100 scale (`center`) and stretches a confidence
- * interval around it. All interval maths live in `interval-model.ts`; this file
- * is the thin translation of gestures to those pure calls:
+ * interval around it. The guess is drawn live as a truncated split-normal bell
+ * above the scale (`normal.ts`), so the player sees the distribution they're
+ * shaping — and being scored on. All interval maths live in `interval-model.ts`;
+ * this file is the thin translation of gestures to those pure calls:
  *
- * - **white dot** — drag to move the centre; the interval travels with it and a
- *   side squashed against a wall grows back on the way out;
+ * - **white dot** — drag horizontally to move the centre (the interval travels
+ *   with it); drag *up* to widen the bell, *down* to narrow it. Each side clamps
+ *   to its own wall, so pushed against an edge the guess turns asymmetric;
  * - **interval ends** — drag each independently; the centre stays inside and is
  *   pushed only when an end would cross it;
- * - **wheel over the engaged dot** — centre + resize the interval symmetrically;
- * - **vertical drag past the track height** — the mobile equivalent of the wheel;
+ * - **wheel over the engaged dot** — up widens, down narrows;
  * - **empty track** — tap to place the centre there.
  *
  * The centre and both interval bounds are ARIA sliders, so the whole control is
  * keyboard-operable (arrows move the centre, shift+arrows resize, the bounds
  * nudge with their own arrows).
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 
 import IntervalHandle from "../IntervalHandle";
@@ -25,12 +27,17 @@ import {
   dragEnd,
   effectiveBounds,
   moveCenter,
-  setSymmetricHalf,
-  symmetricHalf,
+  resizeSpread,
+  setSpread,
   type GuessValue,
 } from "./interval-model";
+import { bellGeometry } from "./normal";
 
 export type { GuessValue };
+
+//: The bell is drawn in this viewBox and stretched to the track width.
+const CURVE_VW = 1000;
+const CURVE_VH = 260;
 
 export interface WaveSliderProps {
   value: GuessValue;
@@ -85,11 +92,21 @@ export default function WaveSlider({
 
   const [dragTarget, setDragTarget] = useState<DragTarget | null>(null);
   const grabOffsetRef = useRef(0);
+  // Captured when a centre drag begins: the pointer Y and the widths at that
+  // moment, so the vertical resize is relative to where the grab started (no
+  // jump on grab) and directional (up widens, down narrows).
+  const dragBaseRef = useRef({ y: 0, widthLeft: 0, widthRight: 0 });
 
   const { center } = value;
   const { lower, upper } = effectiveBounds(value, min, max);
   const toRatio = (x: number) => (max > min ? (x - min) / (max - min) : 0);
   const toLeft = (x: number) => (dir === "rtl" ? 1 - toRatio(x) : toRatio(x));
+
+  const gradientId = useId();
+  const bell = useMemo(
+    () => bellGeometry(value, min, max, CURVE_VW, CURVE_VH, dir),
+    [value, min, max, dir],
+  );
 
   const emit = useCallback(
     (next: GuessValue) => {
@@ -123,15 +140,19 @@ export default function WaveSlider({
       const v = valueRef.current;
       if (!track) return;
       const rect = track.getBoundingClientRect();
-      const midY = rect.top + rect.height / 2;
-      if (Math.abs(clientY - midY) > rect.height) {
-        // Far above/below the track -> the mobile symmetric-resize gesture.
-        const overflowPx = Math.abs(clientY - midY) - rect.height;
-        const unitsPerPx = rect.width ? (max - min) / rect.width : 0;
-        emit(setSymmetricHalf(v, Math.round(overflowPx * unitsPerPx), min, max));
-      } else {
-        emit(moveCenter(v, positionFromClientX(clientX) + grabOffsetRef.current, min, max));
-      }
+
+      // Horizontal movement repositions the centre (widths ride along).
+      const moved = moveCenter(v, positionFromClientX(clientX) + grabOffsetRef.current, min, max);
+
+      // Vertical movement past a small dead-zone reshapes the bell: up widens,
+      // down narrows, relative to where the grab started so there's no jump.
+      const base = dragBaseRef.current;
+      const dy = base.y - clientY; // up is positive
+      const past = Math.sign(dy) * Math.max(0, Math.abs(dy) - rect.height);
+      const unitsPerPx = rect.width ? (max - min) / rect.width : 0;
+      const delta = past * unitsPerPx;
+
+      emit(setSpread(moved, base.widthLeft + delta, base.widthRight + delta, min, max));
     },
     [emit, positionFromClientX, min, max],
   );
@@ -160,17 +181,17 @@ export default function WaveSlider({
     };
   }, [dragTarget, applyCenterDrag, applyEndDrag]);
 
-  // Wheel resizes symmetrically, but only while the dot is engaged (focused),
-  // so idle hover never hijacks page scroll. Non-passive to allow preventDefault.
+  // Wheel resizes the spread, but only while the dot is engaged (focused), so
+  // idle hover never hijacks page scroll. Up widens, down narrows. Non-passive
+  // to allow preventDefault.
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
     const onWheel = (ev: WheelEvent) => {
       if (disabled || document.activeElement !== thumbRef.current) return;
       ev.preventDefault();
-      const v = valueRef.current;
       const delta = ev.deltaY < 0 ? WHEEL_STEP : -WHEEL_STEP;
-      emit(setSymmetricHalf(v, symmetricHalf(v, min, max) + delta, min, max));
+      emit(resizeSpread(valueRef.current, delta, min, max));
     };
     track.addEventListener("wheel", onWheel, { passive: false });
     return () => track.removeEventListener("wheel", onWheel);
@@ -180,11 +201,14 @@ export default function WaveSlider({
     if (disabled) return;
     ev.preventDefault();
     const pointerVal = positionFromClientX(ev.clientX);
+    // Snapshot the widths + grab Y so the vertical resize is relative (no jump).
+    const v = valueRef.current;
+    dragBaseRef.current = { y: ev.clientY, widthLeft: v.widthLeft, widthRight: v.widthRight };
     if (jump) {
       grabOffsetRef.current = 0;
-      emit(moveCenter(valueRef.current, pointerVal, min, max));
+      emit(moveCenter(v, pointerVal, min, max));
     } else {
-      grabOffsetRef.current = valueRef.current.center - pointerVal;
+      grabOffsetRef.current = v.center - pointerVal;
     }
     setDragTarget("center");
   }
@@ -202,12 +226,7 @@ export default function WaveSlider({
     // that arrive before a re-render each build on the previous one.
     const v = valueRef.current;
     const moveTo = (c: number) => emit(moveCenter(v, c, min, max));
-    const widen = (d: number) =>
-      emit({
-        center: v.center,
-        widthLeft: Math.max(0, v.widthLeft + d),
-        widthRight: Math.max(0, v.widthRight + d),
-      });
+    const widen = (d: number) => emit(resizeSpread(v, d, min, max));
 
     let handled = true;
     if (ev.shiftKey) {
@@ -238,6 +257,43 @@ export default function WaveSlider({
 
   return (
     <div className="bsg-slider" data-disabled={disabled || undefined} dir={dir}>
+      <svg
+        className="bsg-slider-curve"
+        data-testid="wave-slider-curve"
+        viewBox={`0 0 ${CURVE_VW} ${CURVE_VH}`}
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--bsg-wave)" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="var(--bsg-wave)" stopOpacity="0.04" />
+          </linearGradient>
+        </defs>
+        <line
+          className="bsg-slider-bell-guide"
+          x1={toLeft(lower) * CURVE_VW}
+          y1="0"
+          x2={toLeft(lower) * CURVE_VW}
+          y2={CURVE_VH}
+        />
+        <line
+          className="bsg-slider-bell-guide"
+          x1={toLeft(upper) * CURVE_VW}
+          y1="0"
+          x2={toLeft(upper) * CURVE_VW}
+          y2={CURVE_VH}
+        />
+        <path className="bsg-slider-bell-fill" d={bell.area} fill={`url(#${gradientId})`} />
+        <path className="bsg-slider-bell-line" d={bell.line} />
+        <line
+          className="bsg-slider-bell-peak"
+          x1={bell.peakX}
+          y1="0"
+          x2={bell.peakX}
+          y2={CURVE_VH}
+        />
+      </svg>
       <div
         ref={trackRef}
         className="bsg-slider-track"

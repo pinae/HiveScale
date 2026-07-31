@@ -8,8 +8,8 @@ import {
   dragEnd,
   effectiveBounds,
   moveCenter,
-  setSymmetricHalf,
-  symmetricHalf,
+  resizeSpread,
+  setSpread,
   type GuessValue,
 } from "./interval-model";
 
@@ -90,19 +90,25 @@ describe("dragEnd (drag one interval end)", () => {
   });
 });
 
-describe("symmetric resize (wheel / vertical drag)", () => {
-  it("centres the interval and sets both half-widths", () => {
-    expect(setSymmetricHalf(v(50, 5, 20), 15, MIN, MAX)).toEqual(v(50, 15, 15));
+describe("spread resize (wheel / vertical drag)", () => {
+  it("grows both half-widths when the delta is positive, shrinks when negative", () => {
+    expect(resizeSpread(v(50, 10, 10), 5, MIN, MAX)).toEqual(v(50, 15, 15));
+    expect(resizeSpread(v(50, 10, 10), -4, MIN, MAX)).toEqual(v(50, 6, 6));
   });
 
-  it("cannot push a border past a nearby wall", () => {
-    // centre at 90 -> max symmetric half is 10.
-    expect(setSymmetricHalf(v(90, 0, 0), 40, MIN, MAX)).toEqual(v(90, 10, 10));
-    noBorderEscapes(setSymmetricHalf(v(90, 0, 0), 40, MIN, MAX));
+  it("never lets a half-width go negative", () => {
+    expect(resizeSpread(v(50, 2, 2), -10, MIN, MAX)).toEqual(v(50, 0, 0));
   });
 
-  it("reports the current symmetric half-width, bounded by the scale", () => {
-    expect(symmetricHalf(v(50, 10, 20), MIN, MAX)).toBe(15);
-    expect(symmetricHalf(v(95, 20, 20), MIN, MAX)).toBe(5); // bounded by the wall
+  it("clamps each side to its own wall — the wall side stops, the other grows", () => {
+    // Centre at 20: the left can only reach 20 (border at 0), the right can reach 80.
+    const out = resizeSpread(v(20, 15, 15), 40, MIN, MAX);
+    expect(out).toEqual(v(20, 20, 55)); // left capped at the wall, right kept going
+    noBorderEscapes(out);
+  });
+
+  it("setSpread targets each side absolutely, clamped to its wall", () => {
+    expect(setSpread(v(50, 5, 20), 15, 15, MIN, MAX)).toEqual(v(50, 15, 15));
+    expect(setSpread(v(90, 0, 0), 40, 40, MIN, MAX)).toEqual(v(90, 40, 10)); // right hits wall
   });
 });

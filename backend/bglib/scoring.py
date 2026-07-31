@@ -9,8 +9,10 @@ Concepts
 - The crowd baseline is a normalized histogram with ``N_BUCKETS`` (20) equal
   buckets of width 5, plus robust summary stats (median, q25, q75).
 - A player's guess is ``(center, width_left, width_right)`` and is interpreted
-  as an asymmetric triangular distribution peaked at ``center`` with support
-  ``[center - width_left, center + width_right]`` clamped to the scale.
+  as a *truncated split-normal* peaked at ``center``, with ``width_left`` and
+  ``width_right`` as the per-side standard deviations — the same bell the
+  WaveSlider draws — renormalized onto the scale so no probability mass is lost
+  off-scale (:class:`SplitNormalDist`).
 
 Scoring formulas (for the game-design team)
 -------------------------------------------
@@ -51,8 +53,14 @@ CALIBRATION_MAX_POINTS = 400.0
 CALIBRATION_WIDTH_SOFTNESS = 150.0
 
 _CRPS_STEP = 0.1
-_MIN_HALF_SUPPORT = 0.5
+_MIN_SIGMA = 1.0  # a zero-width guess still gets a sharp, finite bell
+_SQRT2 = math.sqrt(2.0)
 _EPS = 1e-9
+
+
+def _normal_cdf(x: float, mu: float, sigma: float) -> float:
+    """Standard normal CDF at ``x`` for mean ``mu`` and std ``sigma``."""
+    return 0.5 * (1.0 + math.erf((x - mu) / (sigma * _SQRT2)))
 
 
 # ---------------------------------------------------------------------------
@@ -174,14 +182,53 @@ class HistogramDist:
         return before + fraction * self._weights[index]
 
 
-def guess_to_distribution(guess: Guess) -> TriangularDist:
-    """Interpret a guess as its forecast distribution (validates the guess)."""
+class SplitNormalDist:
+    """A two-piece normal peaked at ``mode``, truncated & renormalized to the
+    scale, i.e. the exact shape the WaveSlider draws.
+
+    The left half uses ``sigma_left`` and the right half ``sigma_right`` (both
+    floored at :data:`_MIN_SIGMA`), so an asymmetric guess is an asymmetric bell.
+    The density is continuous at the mode (both pieces have height 1 there).
+
+    Truncating at ``[0, SCALE_MAX]`` and renormalizing means a guess pushed to an
+    extreme becomes a half-bell leaning on the wall — the natural shape of a
+    decided crowd — with the off-scale tail's mass folded back into the visible
+    part rather than lost. (The common ``sigma * sqrt(2*pi)`` factor cancels in
+    the mass ratios, so only the per-side ``sigma`` weights survive.)
+    """
+
+    def __init__(self, mode: float, sigma_left: float, sigma_right: float) -> None:
+        self.mode = min(max(mode, 0.0), SCALE_MAX)
+        self.sl = max(sigma_left, _MIN_SIGMA)
+        self.sr = max(sigma_right, _MIN_SIGMA)
+        self._z_left = self.sl * (0.5 - _normal_cdf(0.0, self.mode, self.sl))
+        self._z_right = self.sr * (_normal_cdf(SCALE_MAX, self.mode, self.sr) - 0.5)
+        self._z = self._z_left + self._z_right
+
+    def cdf(self, x: float) -> float:
+        if x <= 0.0:
+            return 0.0
+        if x >= SCALE_MAX:
+            return 1.0
+        if self._z <= 0.0:  # degenerate; treat as a point mass at the mode
+            return 0.0 if x < self.mode else 1.0
+        if x <= self.mode:
+            base = _normal_cdf(0.0, self.mode, self.sl)
+            g = self.sl * (_normal_cdf(x, self.mode, self.sl) - base)
+        else:
+            g = self._z_left + self.sr * (_normal_cdf(x, self.mode, self.sr) - 0.5)
+        return min(1.0, max(0.0, g / self._z))
+
+
+def guess_to_distribution(guess: Guess) -> SplitNormalDist:
+    """Interpret a guess as its forecast distribution (validates the guess).
+
+    The widths are the per-side standard deviations of a truncated split normal —
+    the same bell the WaveSlider renders — so players are scored on the shape they
+    see.
+    """
     _validate_guess(guess)
-    left, right = guess.clamped_interval()
-    if right - left < 2 * _MIN_HALF_SUPPORT:
-        left = max(0.0, guess.center - _MIN_HALF_SUPPORT)
-        right = min(SCALE_MAX, guess.center + _MIN_HALF_SUPPORT)
-    return TriangularDist(left, guess.center, right)
+    return SplitNormalDist(guess.center, guess.width_left, guess.width_right)
 
 
 # ---------------------------------------------------------------------------
@@ -189,7 +236,9 @@ def guess_to_distribution(guess: Guess) -> TriangularDist:
 # ---------------------------------------------------------------------------
 
 
-def crps(dist: TriangularDist | HistogramDist, histogram: Sequence[float]) -> float:
+def crps(
+    dist: SplitNormalDist | TriangularDist | HistogramDist, histogram: Sequence[float]
+) -> float:
     """Cramér distance ``∫ (F - G)² dx`` between forecast F and crowd G.
 
     Non-negative; zero exactly when the forecast CDF equals the crowd CDF.

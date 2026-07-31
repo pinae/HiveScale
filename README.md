@@ -441,10 +441,19 @@ in the list and an inline distribution chart on its detail page.
 
 The app boots straight into the playable loop (`PlayScreen`): it deals a blind
 round, the player places their guess with the one-thumb `WaveSlider` (drag the dot
-to move, drag the ends to reshape, wheel/vertical-drag to resize), and submitting
-animates the `RevealWave` payoff (crowd histogram, count-up score, percentile
-stinger, outcome quips, bimodality + beat-the-bot variants). The next round is
-preloaded during the reveal, and network failures drop into a retry state.
+left/right to move, up/down to widen/narrow, drag the ends to reshape, or wheel to
+resize), and submitting animates the `RevealWave` payoff (crowd histogram, count-up
+score, percentile stinger, outcome quips, bimodality + beat-the-bot variants). The
+next round is preloaded during the reveal, and network failures drop into a retry
+state.
+
+The guess is drawn live as a **truncated split-normal bell** above the scale: the
+widths are the per-side standard deviations, so a lopsided guess renders a lopsided
+bell, and pushing toward an extreme clamps one side at the wall and leaves a
+half-bell leaning on it — the natural shape of a decided crowd. The backend scores
+the *same* truncated split-normal (`bglib.scoring.SplitNormalDist`), so players are
+scored on the shape they see; off-scale tail mass is renormalized back in rather
+than lost.
 
 Every primitive also lives in Storybook with a story per state (idle, narrow, wide,
 asymmetric, disabled, RTL, mobile, each reveal outcome): `cd frontend && yarn storybook`.

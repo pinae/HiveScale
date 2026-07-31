@@ -11,7 +11,10 @@
  * - dragging one end sets that border, keeps the other border fixed, and only
  *   nudges the centre when the end would otherwise cross it (the centre always
  *   stays inside the interval);
- * - the wheel / vertical drag resize symmetrically around the centre.
+ * - the wheel / vertical drag change the *spread*: dragging up (or wheeling up)
+ *   widens, down narrows. Each side is clamped to its own wall independently, so
+ *   when one side reaches a wall it stops while the other keeps growing — that's
+ *   what turns a symmetric guess into an asymmetric one near an extreme.
  *
  * No border ever leaves `[min, max]`. Every function is pure so the component
  * wiring stays a thin translation of pointer/keyboard events to these calls.
@@ -67,15 +70,31 @@ export function dragEnd(
   return { center: newCenter, widthLeft: newCenter - newLower, widthRight: upper - newCenter };
 }
 
-/** The current symmetric half-width (bounded so it fits inside the scale). */
-export function symmetricHalf(v: GuessValue, min: number, max: number): number {
-  const maxHalf = Math.min(v.center - min, max - v.center);
-  return Math.min((v.widthLeft + v.widthRight) / 2, maxHalf);
+/**
+ * Set each half-width toward a target, clamped to its own wall. The centre is
+ * untouched. Because the two sides clamp independently, pushing both outward near
+ * an edge stops the wall-side while the other keeps growing — an asymmetric
+ * distribution — and neither border leaves the scale.
+ */
+export function setSpread(
+  v: GuessValue,
+  targetLeft: number,
+  targetRight: number,
+  min: number,
+  max: number,
+): GuessValue {
+  return {
+    center: v.center,
+    widthLeft: clamp(targetLeft, 0, v.center - min),
+    widthRight: clamp(targetRight, 0, max - v.center),
+  };
 }
 
-/** Centre the interval and set both half-widths to `half`, kept inside the scale. */
-export function setSymmetricHalf(v: GuessValue, half: number, min: number, max: number): GuessValue {
-  const maxHalf = Math.min(v.center - min, max - v.center);
-  const h = clamp(half, 0, maxHalf);
-  return { center: v.center, widthLeft: h, widthRight: h };
+/**
+ * Grow (delta > 0) or shrink (delta < 0) both half-widths by `delta`, each
+ * clamped to its wall. Used by the wheel and keyboard; the vertical drag uses
+ * {@link setSpread} against the widths captured when the drag began.
+ */
+export function resizeSpread(v: GuessValue, delta: number, min: number, max: number): GuessValue {
+  return setSpread(v, v.widthLeft + delta, v.widthRight + delta, min, max);
 }

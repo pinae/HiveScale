@@ -149,13 +149,29 @@ describe("WaveSlider — pointer", () => {
     fireEvent.pointerUp(window, { pointerId: 1 });
   });
 
-  it("scales symmetrically when the drag goes far above/below the track", () => {
+  it("widens when the drag goes up, narrows when it goes down", () => {
     const { container } = render(<Harness />);
-    mockTrack(container, 200, 40); // midY = 20, threshold = 40px
+    mockTrack(container, 200, 40); // midY = 20, dead-zone = 40px, 0.5 units/px
     fireEvent.pointerDown(guess(), { clientX: 100, clientY: 20, pointerId: 1 });
-    fireEvent.pointerMove(window, { clientX: 100, clientY: 100, pointerId: 1 }); // dy 80 -> overflow 40px -> 20 units
-    expect(now(lower())).toBe("30");
-    expect(now(upper())).toBe("70");
+    // Up past the dead-zone: dy 60 -> 20px -> +10 units on both sides (12 -> 22).
+    fireEvent.pointerMove(window, { clientX: 100, clientY: -40, pointerId: 1 });
+    expect(now(lower())).toBe("28");
+    expect(now(upper())).toBe("72");
+    // Down past the dead-zone: relative to the grab, -10 units (12 -> 2).
+    fireEvent.pointerMove(window, { clientX: 100, clientY: 80, pointerId: 1 });
+    expect(now(lower())).toBe("48");
+    expect(now(upper())).toBe("52");
+    fireEvent.pointerUp(window, { pointerId: 1 });
+  });
+
+  it("clamps one side at the wall while the other keeps growing (asymmetric)", () => {
+    const { container } = render(<Harness initial={{ center: 20, widthLeft: 5, widthRight: 5 }} />);
+    mockTrack(container, 200, 40);
+    fireEvent.pointerDown(guess(), { clientX: 40, clientY: 20, pointerId: 1 }); // centre stays 20
+    // Big widen: +40 units. Left can only reach the wall at 0; right keeps going.
+    fireEvent.pointerMove(window, { clientX: 40, clientY: -100, pointerId: 1 });
+    expect(now(lower())).toBe("0"); // left pinned at the wall
+    expect(now(upper())).toBe("65"); // right grew past it -> asymmetric
     fireEvent.pointerUp(window, { pointerId: 1 });
   });
 
@@ -166,6 +182,31 @@ describe("WaveSlider — pointer", () => {
     fireEvent.wheel(track, { deltaY: -100 }); // wider by WHEEL_STEP (3): 12 -> 15
     expect(now(lower())).toBe("35");
     expect(now(upper())).toBe("65");
+  });
+});
+
+describe("WaveSlider — bell visualization", () => {
+  it("renders the distribution curve above the scale and moves its peak with the centre", () => {
+    const { container, rerender } = render(
+      <WaveSlider value={{ center: 30, widthLeft: 12, widthRight: 12 }} onChange={() => {}} />,
+    );
+    const curve = container.querySelector<SVGSVGElement>('[data-testid="wave-slider-curve"]')!;
+    expect(curve).toBeTruthy();
+    const peak = curve.querySelector<SVGLineElement>(".bsg-slider-bell-peak")!;
+    const at30 = Number(peak.getAttribute("x1"));
+
+    rerender(<WaveSlider value={{ center: 70, widthLeft: 12, widthRight: 12 }} onChange={() => {}} />);
+    const at70 = Number(peak.getAttribute("x1"));
+    expect(at70).toBeGreaterThan(at30); // peak follows the centre rightward
+  });
+
+  it("mirrors the peak position under rtl", () => {
+    const { container } = render(
+      <WaveSlider value={{ center: 30, widthLeft: 10, widthRight: 10 }} onChange={() => {}} dir="rtl" />,
+    );
+    const peak = container.querySelector<SVGLineElement>(".bsg-slider-bell-peak")!;
+    // Centre 30 in rtl sits on the right: x = (1 - 0.3) * 1000 = 700.
+    expect(Number(peak.getAttribute("x1"))).toBeCloseTo(700, 0);
   });
 });
 
