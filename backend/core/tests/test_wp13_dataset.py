@@ -214,6 +214,19 @@ def test_heatmap_svg_escapes_labels_and_is_empty_safe() -> None:
     assert "<rect" in svg
 
 
+def test_heatmap_svg_is_readable_and_hoverable_on_any_theme() -> None:
+    svg = heatmap_svg(["scale one", "scale two"], [[1.0, 0.72], [0.72, 1.0]])
+    assert 'fill="#ffffff"' in svg  # light backing, not the dark admin theme
+    assert 'fill="#111827"' in svg  # explicit dark axis labels
+    assert "<title>" in svg  # per-cell hover tooltip with the r value
+    # In-cell numbers must not swallow the hover, so the rect's title still fires.
+    assert 'pointer-events="none"' in svg
+
+
+def test_histogram_svg_has_a_light_background() -> None:
+    assert 'fill="#ffffff"' in histogram_svg(_tight_hist(), median=50)
+
+
 # --- export command ---------------------------------------------------------
 
 

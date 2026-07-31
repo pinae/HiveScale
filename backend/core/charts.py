@@ -59,7 +59,9 @@ def histogram_svg(
 
     parts: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}" role="img">'
+        f'viewBox="0 0 {width} {height}" role="img">',
+        # Light backing so the dark median line and bars read under any theme.
+        f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff"/>',
     ]
 
     # IQR band.
@@ -136,16 +138,20 @@ def heatmap_svg(
     height = label_px + grid + 4
     parts: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}" font-family="sans-serif" font-size="10">'
+        f'viewBox="0 0 {width} {height}" font-family="sans-serif" font-size="10">',
+        # A solid light background so the chart is readable regardless of the
+        # admin theme (the dark theme would otherwise leave dark text on dark).
+        f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff"/>',
     ]
 
-    # Cells.
+    # Cells. The in-cell number is pointer-events:none so hovering a cell always
+    # surfaces the rect's <title> tooltip, even where a value is printed on top.
     for i in range(n):
         for j in range(n):
             r = float(corr[i][j]) if corr[i][j] is not None else float("nan")
             x = label_px + j * cell
             y = label_px + i * cell
-            title = f"{labels[i]} × {labels[j]}: {'' if not math.isfinite(r) else _f(r)}"
+            title = f"{labels[i]} × {labels[j]}: {'n/a' if not math.isfinite(r) else _f(r)}"
             parts.append(
                 f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" '
                 f'fill="{_correlation_color(r)}" stroke="#e5e7eb">'
@@ -156,18 +162,20 @@ def heatmap_svg(
                 fill = "#fff" if abs(r) >= 0.8 else "#111"
                 parts.append(
                     f'<text x="{_f(tx)}" y="{_f(ty)}" text-anchor="middle" '
-                    f'fill="{fill}">{_f(r)}</text>'
+                    f'fill="{fill}" pointer-events="none">{_f(r)}</text>'
                 )
 
-    # Row labels (left) and column labels (rotated, top).
+    # Row labels (left) and column labels (rotated, top) — explicit dark fill so
+    # they read on the light background under any admin theme.
     for i, label in enumerate(labels):
         ry = label_px + i * cell + cell / 2 + 3
         parts.append(
-            f'<text x="{label_px - 4}" y="{_f(ry)}" text-anchor="end">{_esc(label)}</text>'
+            f'<text x="{label_px - 4}" y="{_f(ry)}" text-anchor="end" '
+            f'fill="#111827">{_esc(label)}</text>'
         )
         cx = label_px + i * cell + cell / 2
         parts.append(
-            f'<text x="{_f(cx)}" y="{label_px - 4}" text-anchor="start" '
+            f'<text x="{_f(cx)}" y="{label_px - 4}" text-anchor="start" fill="#111827" '
             f'transform="rotate(-90 {_f(cx)} {label_px - 4})">{_esc(label)}</text>'
         )
 
