@@ -194,6 +194,28 @@ def test_snapshot_requires_at_least_one_eligible_guess(pairing: Pairing, player:
         recompute_snapshot(pairing)
 
 
+def test_backfill_fills_a_stale_snapshot_missing_its_belief(
+    pairing: Pairing, player: Player
+) -> None:
+    # Regression: snapshots computed before the belief field existed have an empty
+    # belief_histogram, which vanishes the reveal curve and makes belief_match
+    # collapse onto means_match. The backfill repopulates them from the guesses.
+    from core.services import backfill_missing_belief_histograms
+
+    for _ in range(6):
+        _make_guess(pairing, player, center=30.0, width_left=8, width_right=8)
+    snapshot = recompute_snapshot(pairing)
+    snapshot.belief_histogram = []  # simulate a pre-feature snapshot
+    snapshot.save(update_fields=["belief_histogram"])
+
+    assert backfill_missing_belief_histograms() == 1
+    snapshot.refresh_from_db()
+    assert len(snapshot.belief_histogram) == 20
+    assert sum(snapshot.belief_histogram) == pytest.approx(1.0)
+    # Idempotent: a second run touches nothing.
+    assert backfill_missing_belief_histograms() == 0
+
+
 def test_snapshot_belief_histogram_sums_the_full_guesses(pairing: Pairing, player: Player) -> None:
     # Two camps, each guessing a tight bell -> the summed belief is bimodal and
     # normalized, distinct from the (also bimodal) histogram of bare means.

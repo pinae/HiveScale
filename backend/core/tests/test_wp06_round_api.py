@@ -198,6 +198,23 @@ def test_round_trip_reveal_payload_on_a_graduated_pairing() -> None:
     assert guess.quality_flags == []
 
 
+def test_reveal_carries_a_distinct_belief_curve_and_the_matches_differ() -> None:
+    # Regression: the belief curve must actually reach the client, and means_match
+    # must differ from belief_match (they were identical when belief was empty and
+    # the score fell back to the means overlap).
+    pairing = _graduated_pairing()
+    client = APIClient()
+    player = _session(client)
+
+    body = _submit(client, _slow_token(pairing, player), center=50.0, wl=20, wr=20).json()
+
+    belief = body["crowd"]["belief_histogram"]
+    assert len(belief) == 20
+    assert sum(belief) == pytest.approx(1.0, abs=1e-6)  # a real, normalized curve
+    assert belief != body["crowd"]["histogram"]  # summed beliefs ≠ bare means
+    assert body["score"]["means_match"] != pytest.approx(body["score"]["belief_match"])
+
+
 def test_scoring_uses_the_snapshot_from_before_the_guess() -> None:
     pairing = _graduated_pairing()
     before = DistributionSnapshot.objects.latest("computed_at")

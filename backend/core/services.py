@@ -86,6 +86,34 @@ def _belief_histogram(rows: list[tuple[float, float, float, float]]) -> list[flo
     return [b / total_weight for b in belief]
 
 
+def backfill_missing_belief_histograms() -> int:
+    """Fill in ``belief_histogram`` on each pairing's latest snapshot where it's
+    empty (snapshots computed before the field existed).
+
+    The reveal scores against a pairing's latest snapshot, so a stale one makes
+    the belief curve vanish and collapses ``belief_match`` onto ``means_match``.
+    Recomputes belief from the pairing's current eligible guesses — which, since
+    snapshots are refreshed on every counted answer, are exactly that snapshot's
+    basis. Returns the number of snapshots updated. Idempotent.
+    """
+    updated = 0
+    for pairing in Pairing.objects.all():
+        snapshot = pairing.snapshots.order_by("-computed_at", "-id").first()
+        if snapshot is None or snapshot.belief_histogram:
+            continue
+        rows = list(
+            eligible_guesses(pairing).values_list(
+                "center", "width_left", "width_right", "player__weight"
+            )
+        )
+        belief = _belief_histogram(rows)
+        if belief:
+            snapshot.belief_histogram = belief
+            snapshot.save(update_fields=["belief_histogram"])
+            updated += 1
+    return updated
+
+
 # ---------------------------------------------------------------------------
 # Account claiming (WP-04)
 # ---------------------------------------------------------------------------
