@@ -16,8 +16,8 @@ export interface IntervalHandleProps {
   sigmaMax: number;
   /** Screen position across the track, 0 (left) → 1 (right), already RTL-mirrored. */
   leftFraction: number;
-  /** How far below the rail the knob hangs, 0 (on the rail) → 1 (σ = max). */
-  drop?: number;
+  /** How far (px) below the rail's top the knob hangs, so it rides the bent rail. */
+  dropPx?: number;
   /** True when σ has passed the wall and the knob is dropped off the scale. */
   offScale?: boolean;
   /** Visual side of the scale, so the corner nearest it is squared into a drop. */
@@ -36,7 +36,7 @@ export default function IntervalHandle({
   sigma,
   sigmaMax,
   leftFraction,
-  drop = 0,
+  dropPx = 0,
   offScale = false,
   pointSide,
   disabled = false,
@@ -71,7 +71,7 @@ export default function IntervalHandle({
       data-disabled={disabled || undefined}
       data-offscale={offScale || undefined}
       data-point={pointSide}
-      style={{ left: `${leftFraction * 100}%`, "--bsg-handle-drop": drop } as CSSProperties}
+      style={{ left: `${leftFraction * 100}%`, "--bsg-handle-drop-px": `${dropPx}px` } as CSSProperties}
       onKeyDown={handleKeyDown}
       onPointerDown={disabled ? undefined : onPointerDown}
     />

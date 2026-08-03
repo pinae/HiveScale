@@ -132,11 +132,11 @@ describe("WaveSlider — pointer", () => {
 
   it("pushes a σ handle past the wall by dragging down the wall-drop", () => {
     const { container } = render(<Harness initial={{ center: 95, widthLeft: 12, widthRight: 5 }} />);
-    mockTrack(container, 200, 40); // bottom 40 + rail-offset 5 -> corner at y = 45
-    fireEvent.pointerDown(rightSigma(), { clientX: 200, clientY: 45, pointerId: 1 }); // at the wall
-    // Drag 16px down the 80px wall-drop. That fraction (16/80) of the remaining
-    // span to the cap (100 - 5 = 95) lands on σ = 5 + 0.2 * 95 = 24.
-    fireEvent.pointerMove(window, { clientX: 200, clientY: 61, pointerId: 1 });
+    mockTrack(container, 200, 40); // bottom 40 + offset 5 + corner 40 -> elbow foot y = 85
+    fireEvent.pointerDown(rightSigma(), { clientX: 200, clientY: 85, pointerId: 1 }); // at the wall
+    // Drag 16px down the 80px straight wall-drop below the elbow. That fraction
+    // (16/80) of the remaining span to the cap (100 - 5 = 95) is σ = 5 + 0.2 * 95 = 24.
+    fireEvent.pointerMove(window, { clientX: 200, clientY: 101, pointerId: 1 });
     expect(now(rightSigma())).toBe("24");
     expect(rightSigma()).toHaveAttribute("data-offscale", "true");
     expect(now(guess())).toBe("95"); // centre untouched

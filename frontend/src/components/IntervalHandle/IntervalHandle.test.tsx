@@ -18,12 +18,12 @@ describe("IntervalHandle", () => {
 
   it("marks an off-scale handle and drops it below the rail", () => {
     render(
-      <IntervalHandle label="Right spread" sigma={60} sigmaMax={100} leftFraction={1} drop={0.5} offScale />,
+      <IntervalHandle label="Right spread" sigma={60} sigmaMax={100} leftFraction={1} dropPx={72} offScale />,
     );
     const handle = screen.getByRole("slider", { name: /right spread/i });
     expect(handle).toHaveAttribute("data-offscale", "true");
     expect(handle.getAttribute("aria-valuetext")).toMatch(/past the scale/i);
-    expect(handle).toHaveStyle({ "--bsg-handle-drop": "0.5" });
+    expect(handle).toHaveStyle({ "--bsg-handle-drop-px": "72px" });
   });
 
   it("squares the corner nearest the scale via data-point", () => {

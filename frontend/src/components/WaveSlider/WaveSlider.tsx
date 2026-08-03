@@ -43,15 +43,34 @@ export type { GuessValue };
 const CURVE_VW = 1000;
 const CURVE_VH = 260;
 
-//: Sub-rail geometry. Handles ride a rail this many px below the track; past the
-//: wall they hang down up to RAIL_DROP_PX (kept in sync with the CSS variables
-//: --bsg-rail-offset / --bsg-rail-drop).
+//: Sub-rail geometry (kept in sync with the CSS variables). Handles ride a rail
+//: RAIL_OFFSET_PX below the track; its ends bend down through a RAIL_CORNER_PX-tall
+//: rounded elbow (horizontal radius CORNER_FRAC of the track width), then a
+//: handle pushed past the wall hangs straight down up to RAIL_DROP_PX further.
 const RAIL_OFFSET_PX = 5;
+const RAIL_CORNER_PX = 40;
 const RAIL_DROP_PX = 80;
+const CORNER_FRAC = 0.12;
+//: Track height (--bsg-thumb-size), for placing the dashed σ guides below it.
+const TRACK_PX = 32;
 
 //: A σ handle is never drawn closer than this fraction of the track to the
 //: centre, so at σ→0 the two handles stay visible either side of the dot.
 const HANDLE_MIN_GAP = 0.05;
+
+/**
+ * How far (px) below the sub-rail's top edge a handle hangs, so it rides the
+ * rail's actual shape: flat along the top, curving down the rounded elbow as it
+ * nears its wall, then straight down the drop once σ has passed the wall.
+ */
+function railDropPx(leftFraction: number, drop: number, offScale: boolean) {
+  if (offScale) return RAIL_CORNER_PX + drop * RAIL_DROP_PX;
+  const edge = Math.min(leftFraction, 1 - leftFraction);
+  if (edge >= CORNER_FRAC) return 0; // still on the flat top
+  // On the quarter-ellipse elbow: cos runs -1 (at the wall) → 0 (where it starts).
+  const cos = edge / CORNER_FRAC - 1;
+  return RAIL_CORNER_PX * (1 - Math.sqrt(1 - cos * cos));
+}
 
 export interface WaveSliderProps {
   value: GuessValue;
@@ -134,6 +153,13 @@ export default function WaveSlider({
   // nearest the scale is squared off into a drop pointing at its σ guide.
   const handlePointSide = (side: "lower" | "upper"): "left" | "right" =>
     (side === "lower") !== (dir === "rtl") ? "left" : "right";
+
+  // Screen fraction + how far each handle hangs below the rail, so both the knob
+  // and its dashed guide land on the rail's bent shape.
+  const leftFrac = handleFraction("lower", leftPlacement.frac, leftPlacement.offScale);
+  const rightFrac = handleFraction("upper", rightPlacement.frac, rightPlacement.offScale);
+  const leftDropPx = railDropPx(leftFrac, leftPlacement.drop, leftPlacement.offScale);
+  const rightDropPx = railDropPx(rightFrac, rightPlacement.drop, rightPlacement.offScale);
 
   const gradientId = useId();
   const bell = useMemo(
@@ -219,11 +245,12 @@ export default function WaveSlider({
 
       let sigma = clamp(horizontal, 0, wall);
       if (horizontal >= wall - 1e-6) {
-        // At (or past) the wall — the extra spread comes from the downward drag.
-        // The full wall-drop (RAIL_DROP_PX) maps to the remaining σ up to the cap,
-        // so dragging to the bottom of the rail reaches the widest bell.
-        const cornerY = rect.bottom + RAIL_OFFSET_PX;
-        const dropPx = clamp(clientY - cornerY, 0, RAIL_DROP_PX);
+        // At (or past) the wall — the extra spread comes from dragging down the
+        // straight part of the rail, below the elbow. The full drop (RAIL_DROP_PX)
+        // maps to the remaining σ up to the cap, so reaching the bottom of the
+        // rail reaches the widest bell.
+        const elbowBottomY = rect.bottom + RAIL_OFFSET_PX + RAIL_CORNER_PX;
+        const dropPx = clamp(clientY - elbowBottomY, 0, RAIL_DROP_PX);
         const capOverflow = Math.max(1, sigmaCap(min, max) - wall);
         sigma = wall + (dropPx / RAIL_DROP_PX) * capOverflow;
       }
@@ -376,21 +403,28 @@ export default function WaveSlider({
           />
         ))}
         {/* Sub-rail the σ handles ride: a horizontal line whose ends bend down
-            into wall-drops, so a handle pushed past the scale has somewhere to go
-            (down, not off the side). */}
+            through a rounded elbow into wall-drops, so a handle pushed past the
+            scale has somewhere to go (down, not off the side). */}
         <div className="bsg-slider-subrail" aria-hidden="true" />
-        {/* Continue the bell's ±1σ dashed guides down through the track to the
-            bottom edge, so each mark visually connects to its σ handle. */}
-        <div
-          className="bsg-slider-guide"
-          aria-hidden="true"
-          style={{ left: `${toLeft(lower) * 100}%` }}
-        />
-        <div
-          className="bsg-slider-guide"
-          aria-hidden="true"
-          style={{ left: `${toLeft(upper) * 100}%` }}
-        />
+        {/* Continue the bell's ±1σ dashed guides down to each handle, in one SVG
+            so the dashes match the diagram's exactly and grow as a handle drops.
+            No viewBox: x is a %% of the track, y is px below the track top. */}
+        <svg className="bsg-slider-guides" aria-hidden="true">
+          <line
+            className="bsg-slider-bell-guide"
+            x1={`${toLeft(lower) * 100}%`}
+            y1={0}
+            x2={`${toLeft(lower) * 100}%`}
+            y2={TRACK_PX + RAIL_OFFSET_PX + leftDropPx}
+          />
+          <line
+            className="bsg-slider-bell-guide"
+            x1={`${toLeft(upper) * 100}%`}
+            y1={0}
+            x2={`${toLeft(upper) * 100}%`}
+            y2={TRACK_PX + RAIL_OFFSET_PX + rightDropPx}
+          />
+        </svg>
         <div
           className="bsg-slider-band"
           aria-hidden="true"
@@ -407,8 +441,8 @@ export default function WaveSlider({
           label="Left spread"
           sigma={value.widthLeft}
           sigmaMax={cap}
-          leftFraction={handleFraction("lower", leftPlacement.frac, leftPlacement.offScale)}
-          drop={leftPlacement.drop}
+          leftFraction={leftFrac}
+          dropPx={leftDropPx}
           offScale={leftPlacement.offScale}
           pointSide={handlePointSide("lower")}
           step={step}
@@ -420,8 +454,8 @@ export default function WaveSlider({
           label="Right spread"
           sigma={value.widthRight}
           sigmaMax={cap}
-          leftFraction={handleFraction("upper", rightPlacement.frac, rightPlacement.offScale)}
-          drop={rightPlacement.drop}
+          leftFraction={rightFrac}
+          dropPx={rightDropPx}
           offScale={rightPlacement.offScale}
           pointSide={handlePointSide("upper")}
           step={step}

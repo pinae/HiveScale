@@ -65,13 +65,18 @@ body {
 
 .bsg-slider {
   --bsg-thumb-size: 32px;
-  /* Sub-rail the σ handles ride, and how far they can hang below it past a wall.
-     Keep RAIL_OFFSET_PX / RAIL_DROP_PX in WaveSlider.tsx in sync with these. */
+  /* Sub-rail the σ handles ride: it sits `offset` below the track, its ends bend
+     down through a `corner`-tall rounded elbow, then drop `drop` px straight.
+     Keep RAIL_OFFSET_PX / RAIL_CORNER_PX / RAIL_DROP_PX in WaveSlider.tsx in
+     sync with these. */
   --bsg-rail-offset: 5px;
+  --bsg-rail-corner: 40px;
   --bsg-rail-drop: 80px;
   padding: calc(var(--bsg-thumb-size) / 2) calc(var(--bsg-thumb-size) / 2 + 4px);
-  /* Extra room below the track for the sub-rail + wall-drop. */
-  padding-bottom: calc(var(--bsg-rail-offset) + var(--bsg-rail-drop) + 12px);
+  /* Extra room below the track for the sub-rail (corner + drop). */
+  padding-bottom: calc(
+    var(--bsg-rail-offset) + var(--bsg-rail-corner) + var(--bsg-rail-drop) + 12px
+  );
   touch-action: none;
   user-select: none;
 }
@@ -83,22 +88,25 @@ body {
   position: absolute;
   inset-inline: 0;
   top: calc(100% + var(--bsg-rail-offset));
-  height: var(--bsg-rail-drop);
+  height: calc(var(--bsg-rail-corner) + var(--bsg-rail-drop));
   border: 2px solid color-mix(in srgb, var(--bsg-wave-deep) 55%, transparent);
   border-bottom: none;
-  border-top-left-radius: 12% 40px;
-  border-top-right-radius: 12% 40px;
+  /* Horizontal radius ≥ 10% of the width so the downward bend is obvious; the
+     vertical radius is --bsg-rail-corner (the elbow the handle rides around). */
+  border-top-left-radius: 12% var(--bsg-rail-corner);
+  border-top-right-radius: 12% var(--bsg-rail-corner);
   pointer-events: none;
 }
 
-/* Dashed σ guides extended down from the bell to the bottom edge of the control,
-   so each ±1σ mark visually connects to its σ handle. */
-.bsg-slider-guide {
+/* Overlay for the dashed σ guides below the scale: one SVG so the dashes match
+   the bell's ±1σ guides exactly (same class, same non-scaling stroke) and read
+   as one continuous line from the diagram down to each handle. */
+.bsg-slider-guides {
   position: absolute;
+  inset-inline: 0;
   top: 0;
-  height: calc(100% + var(--bsg-rail-offset) + var(--bsg-rail-drop));
-  border-left: 2px dashed color-mix(in srgb, var(--bsg-wave) 45%, transparent);
-  transform: translateX(-50%);
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
 }
 
@@ -187,8 +195,9 @@ body {
 
 .bsg-interval-handle {
   position: absolute;
-  /* On the sub-rail below the track; drops toward RAIL_DROP as σ passes the wall. */
-  top: calc(100% + var(--bsg-rail-offset) + var(--bsg-handle-drop, 0) * var(--bsg-rail-drop));
+  /* On the sub-rail below the track. WaveSlider computes how far it hangs so the
+     knob follows the rail's bend and drop (--bsg-handle-drop-px). */
+  top: calc(100% + var(--bsg-rail-offset) + var(--bsg-handle-drop-px, 0px));
   border: none;
   cursor: grab;
 }
@@ -217,11 +226,11 @@ body {
   box-shadow: 0 2px 6px rgb(0 0 0 / 40%);
 }
 
-/* Square off the top corner nearest the scale so each handle reads as a drop
-   pointing back at its dashed σ guide: left handle → sharp top-left, right
-   handle → sharp top-right. */
-.bsg-interval-handle[data-point="left"] { border-top-left-radius: 0; }
-.bsg-interval-handle[data-point="right"] { border-top-right-radius: 0; }
+/* Square off the inner top corner (nearest the centre) so each handle reads as a
+   drop pointing inward at its dashed σ guide: the min (left) handle keeps a sharp
+   top-right, the max (right) handle a sharp top-left. */
+.bsg-interval-handle[data-point="left"] { border-top-right-radius: 0; }
+.bsg-interval-handle[data-point="right"] { border-top-left-radius: 0; }
 
 .bsg-slider[data-disabled] .bsg-slider-thumb,
 .bsg-slider[data-disabled] .bsg-interval-handle,
