@@ -1,7 +1,7 @@
 /**
  * WP-10: SessionHeader — brand + running score, with the streak flame gated.
  */
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -34,6 +34,35 @@ describe("SessionHeader", () => {
     rerender(<SessionHeader xp={0} level={1} streak={0} onClaim={onClaim} isClaimed />);
     expect(screen.queryByRole("button", { name: /save progress/i })).not.toBeInTheDocument();
     expect(screen.getByTestId("session-saved")).toBeInTheDocument();
+  });
+
+  it("puts the feature buttons in a nav below the bar, not in the top line", () => {
+    render(
+      <SessionHeader
+        xp={0}
+        level={7}
+        streak={0}
+        onDailyWave={() => {}}
+        onVote={() => {}}
+        onShowStats={() => {}}
+      />,
+    );
+    const nav = screen.getByRole("navigation", { name: /game features/i });
+    // Daily / Vote / Stats live in the nav, so the top line stays narrow.
+    expect(within(nav).getByRole("button", { name: /daily/i })).toBeInTheDocument();
+    expect(within(nav).getByRole("button", { name: /vote/i })).toBeInTheDocument();
+    expect(within(nav).getByRole("button", { name: /stats/i })).toBeInTheDocument();
+  });
+
+  it("omits the feature nav entirely when there are no actions", () => {
+    render(<SessionHeader xp={0} level={1} streak={0} />);
+    expect(screen.queryByRole("navigation", { name: /game features/i })).not.toBeInTheDocument();
+  });
+
+  it("labels the saved indicator with an Account header", () => {
+    render(<SessionHeader xp={0} level={1} streak={0} isClaimed />);
+    expect(screen.getByText(/account/i)).toBeInTheDocument();
+    expect(screen.getByTestId("session-saved")).toHaveTextContent(/saved/i);
   });
 
   it("shows the XP multiplier only above ×1, and a level progress bar", () => {

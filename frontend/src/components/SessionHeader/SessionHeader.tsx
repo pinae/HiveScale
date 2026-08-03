@@ -47,70 +47,55 @@ export default function SessionHeader({
     progress && progress.level_span > 0
       ? Math.max(0, Math.min(100, (progress.into_level / progress.level_span) * 100))
       : 0;
+  const hasActions = Boolean(onDailyWave || onVote || onChallenge || onScaleRequest || onShowStats);
   return (
     <header className="bsg-session-header">
-      <div className="bsg-session-brand">
-        <img className="bsg-logo" src={logoUrl} alt="" width={30} height={30} />
-        <h1 className="bsg-session-title">HiveScale</h1>
-      </div>
-      <dl className="bsg-session-stats">
-        <div>
-          <dt>Level</dt>
-          <dd data-testid="session-level">{level}</dd>
+      {/* Top line: brand floats left, the level/xp/multiplier stat trio is
+          centred, and the account status floats right. flex-wrap means that if
+          it can't all fit it drops onto a second line rather than scrolling. */}
+      <div className="bsg-session-top">
+        <div className="bsg-session-brand">
+          <img className="bsg-logo" src={logoUrl} alt="" width={30} height={30} />
+          <h1 className="bsg-session-title">HiveScale</h1>
         </div>
-        <div>
-          <dt>XP</dt>
-          <dd data-testid="session-xp">{xp}</dd>
+        <dl className="bsg-session-stats">
+          <div>
+            <dt>Level</dt>
+            <dd data-testid="session-level">{level}</dd>
+          </div>
+          <div>
+            <dt>XP</dt>
+            <dd data-testid="session-xp">{xp}</dd>
+          </div>
+          {multiplier > 1 ? (
+            <div className="bsg-session-mult" aria-label={`XP multiplier ${multiplier} times`}>
+              <dt aria-hidden="true">Mult</dt>
+              <dd data-testid="session-multiplier">×{multiplier}</dd>
+            </div>
+          ) : null}
+          {streak >= 3 ? (
+            <div className="bsg-session-streak" aria-label={`Hot streak: ${streak}`}>
+              <dt aria-hidden="true">Streak</dt>
+              <dd>🔥 {streak}</dd>
+            </div>
+          ) : null}
+        </dl>
+        <div className="bsg-session-account">
+          {isClaimed ? (
+            <div className="bsg-session-stat">
+              <span className="bsg-session-stat-dt">Account</span>
+              <span className="bsg-session-saved" data-testid="session-saved">
+                ✓ Saved
+              </span>
+            </div>
+          ) : onClaim ? (
+            <button type="button" className="bsg-btn bsg-session-claimbtn" onClick={onClaim}>
+              Save progress
+            </button>
+          ) : null}
         </div>
-        {multiplier > 1 ? (
-          <div className="bsg-session-mult" aria-label={`XP multiplier ${multiplier} times`}>
-            <dt aria-hidden="true">Mult</dt>
-            <dd data-testid="session-multiplier">×{multiplier}</dd>
-          </div>
-        ) : null}
-        {streak >= 3 ? (
-          <div className="bsg-session-streak" aria-label={`Hot streak: ${streak}`}>
-            <dt aria-hidden="true">Streak</dt>
-            <dd>🔥 {streak}</dd>
-          </div>
-        ) : null}
-      </dl>
-      <div className="bsg-session-actions">
-        {isClaimed ? (
-          <span className="bsg-session-saved" data-testid="session-saved">
-            ✓ Saved
-          </span>
-        ) : onClaim ? (
-          <button type="button" className="bsg-btn bsg-session-claimbtn" onClick={onClaim}>
-            Save progress
-          </button>
-        ) : null}
-        {onDailyWave ? (
-          <button type="button" className="bsg-btn bsg-session-wavebtn" onClick={onDailyWave}>
-            🌊 Daily
-          </button>
-        ) : null}
-        {onVote ? (
-          <button type="button" className="bsg-btn bsg-session-votebtn" onClick={onVote}>
-            🗳️ Vote
-          </button>
-        ) : null}
-        {onChallenge ? (
-          <button type="button" className="bsg-btn bsg-session-challengebtn" onClick={onChallenge}>
-            🧩 Challenge
-          </button>
-        ) : null}
-        {onScaleRequest ? (
-          <button type="button" className="bsg-btn bsg-session-scalebtn" onClick={onScaleRequest}>
-            📐 Scale
-          </button>
-        ) : null}
-        {onShowStats ? (
-          <button type="button" className="bsg-btn bsg-session-statsbtn" onClick={onShowStats}>
-            Stats
-          </button>
-        ) : null}
       </div>
+
       {progress ? (
         <div
           className="bsg-session-progress"
@@ -123,6 +108,37 @@ export default function SessionHeader({
         >
           <div className="bsg-session-progress-fill" style={{ width: `${pct}%` }} />
         </div>
+      ) : null}
+
+      {/* Feature nav sits below the XP bar and wraps, so it never widens the bar. */}
+      {hasActions ? (
+        <nav className="bsg-session-actions" aria-label="Game features">
+          {onDailyWave ? (
+            <button type="button" className="bsg-btn bsg-session-wavebtn" onClick={onDailyWave}>
+              🌊 Daily
+            </button>
+          ) : null}
+          {onVote ? (
+            <button type="button" className="bsg-btn bsg-session-votebtn" onClick={onVote}>
+              🗳️ Vote
+            </button>
+          ) : null}
+          {onChallenge ? (
+            <button type="button" className="bsg-btn bsg-session-challengebtn" onClick={onChallenge}>
+              🧩 Challenge
+            </button>
+          ) : null}
+          {onScaleRequest ? (
+            <button type="button" className="bsg-btn bsg-session-scalebtn" onClick={onScaleRequest}>
+              📐 Scale
+            </button>
+          ) : null}
+          {onShowStats ? (
+            <button type="button" className="bsg-btn bsg-session-statsbtn" onClick={onShowStats}>
+              Stats
+            </button>
+          ) : null}
+        </nav>
       ) : null}
     </header>
   );

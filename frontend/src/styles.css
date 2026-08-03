@@ -373,21 +373,31 @@ body {
 }
 
 .bsg-session-header {
-  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.6rem;
   padding: 0.75rem 1rem;
 }
 
+/* Top line: brand (left) · stats (centred) · account (right). The auto margins
+   centre the stat trio; flex-wrap drops overflow onto a second line instead of
+   scrolling horizontally. */
+.bsg-session-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+.bsg-session-brand { display: flex; align-items: center; gap: 0.5rem; margin-right: auto; }
+.bsg-session-account { display: flex; align-items: center; margin-left: auto; }
+.bsg-session-title { margin: 0; font-size: 1.1rem; letter-spacing: 0.02em; }
+
 .bsg-session-mult dd { color: var(--bsg-wave); }
 .bsg-session-progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
   background: color-mix(in srgb, var(--bsg-wave) 15%, transparent);
 }
 .bsg-session-progress-fill {
@@ -396,12 +406,17 @@ body {
   transition: width 400ms ease;
 }
 
-.bsg-session-brand { display: flex; align-items: center; gap: 0.5rem; }
-.bsg-session-title { margin: 0; font-size: 1.1rem; letter-spacing: 0.02em; }
-
+/* Shared stat look: tiny uppercase label above a bold value, centred. Used by
+   the level/xp/multiplier trio and the account status. */
 .bsg-session-stats { display: flex; gap: 1rem; margin: 0; }
-.bsg-session-stats div { display: flex; flex-direction: column; align-items: center; }
-.bsg-session-stats dt { color: var(--bsg-ink-dim); font-size: 0.65rem; text-transform: uppercase; }
+.bsg-session-stats div,
+.bsg-session-stat { display: flex; flex-direction: column; align-items: center; }
+.bsg-session-stats dt,
+.bsg-session-stat-dt {
+  color: var(--bsg-ink-dim);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
 .bsg-session-stats dd { margin: 0; font-weight: 800; }
 .bsg-session-streak dd { color: var(--bsg-accent); }
 
@@ -504,7 +519,13 @@ body {
 
 /* --- StatsPanel (WP-11) ------------------------------------------------- */
 
-.bsg-session-actions { display: flex; align-items: center; gap: 0.5rem; }
+.bsg-session-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
 .bsg-session-statsbtn,
 .bsg-session-wavebtn,
 .bsg-session-votebtn,
@@ -602,8 +623,8 @@ body {
   border-color: color-mix(in srgb, var(--bsg-accent) 45%, transparent);
 }
 .bsg-session-saved {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.9rem;
+  font-weight: 800;
   color: var(--bsg-wave);
   white-space: nowrap;
 }
