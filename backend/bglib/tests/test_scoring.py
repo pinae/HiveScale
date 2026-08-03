@@ -1,4 +1,4 @@
-"""WP-02 red tests: the pure scoring library.
+"""The pure scoring library.
 
 These tests are the executable specification for ``bglib.scoring`` and are
 committed BEFORE the implementation exists (TDD red).

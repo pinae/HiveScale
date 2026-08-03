@@ -1,5 +1,5 @@
 /**
- * The app boots straight into the game loop (WP-10): the brand header is
+ * The app boots straight into the game loop: the brand header is
  * present immediately and the first round is dealt from the backend.
  */
 import { render, screen } from "@testing-library/react";

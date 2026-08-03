@@ -1,4 +1,4 @@
-"""WP-11/12: the Daily Wave play API (plan §2.2 / §3.3).
+"""The Daily Wave play API (plan §2.2 / §3.3).
 
 Executable spec:
 - ``GET /api/daily-wave/`` needs a session, lazily builds today's wave, and

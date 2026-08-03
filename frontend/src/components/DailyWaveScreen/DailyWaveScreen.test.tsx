@@ -1,5 +1,5 @@
 /**
- * WP-11/12: the Daily Wave loop (against MSW) — play every slot, watch the emoji
+ * The Daily Wave loop (against MSW) — play every slot, watch the emoji
  * progress fill, and land on the shareable result.
  */
 import { render, screen } from "@testing-library/react";

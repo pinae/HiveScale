@@ -1,5 +1,5 @@
 /**
- * WP-09 red tests: ScorePanel — the count-up total, breakdown, percentile, quip.
+ * ScorePanel — the count-up total, breakdown, percentile, quip.
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

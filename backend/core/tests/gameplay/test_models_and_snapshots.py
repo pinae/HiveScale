@@ -1,4 +1,4 @@
-"""WP-03 red tests: domain models, snapshot recomputation, demo seed.
+"""Domain models, snapshot recomputation, demo seed.
 
 Executable spec (docs/hivescale-plan.md, WP-03):
 - snapshot median/quartiles on a 50-guess fixture match a numpy reference

@@ -1,5 +1,5 @@
 /**
- * WP-11: StatsPanel renders the archetype identity and calibration numbers.
+ * StatsPanel renders the archetype identity and calibration numbers.
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

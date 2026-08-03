@@ -1,4 +1,4 @@
-"""WP-11: Daily Wave generation and the shareable emoji result (plan §2.2)."""
+"""Daily Wave generation and the shareable emoji result (plan §2.2)."""
 
 import datetime
 

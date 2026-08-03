@@ -1,5 +1,5 @@
 /**
- * WP-08 red tests: ScaleHeader — the two bipolar scale labels.
+ * ScaleHeader — the two bipolar scale labels.
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

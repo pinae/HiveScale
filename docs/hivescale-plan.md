@@ -282,3 +282,31 @@ WP-01 ─┬─ WP-02 ─┬─ WP-05 ─┐
 3. Language strategy: launch single-language; distributions are culture-specific, so per-language baselines from day one (a `language` field is already on `Thing`).
 4. Licensing of the resulting dataset (CC-BY? research-only?) — affects the consent copy shown at account claim.
 5. Which Gemini model tier for cold-start estimates (cost vs. quality), and whether to also collect a second model later for cross-model comparison.
+
+---
+
+## Part 7 — Test reorganisation (post-implementation)
+
+This plan drove development as a sequence of work packages (WP-01…WP-13), and for a
+while the test files were named after them (`test_wp06_round_api.py`, and so on). Once
+everything shipped, the tests were **reorganised into logical packages** by subject — the
+work-package numbers only make sense against this document, not to someone reading the
+suite. The tests themselves were only moved and renamed; no test logic changed. WP
+references remain here in the plan and in occasional "executable spec" cross-references
+inside the tests, so the traceability from a test back to its spec still holds.
+
+Backend tests now live in subpackages under `backend/core/tests/` (plus the pure scoring
+library's own tests in `backend/bglib/tests/`):
+
+| Package | Contents | Moved from |
+| --- | --- | --- |
+| `platform/` | health, anonymous sessions/accounts, dev CSRF | `test_health`, `test_wp04_sessions`, `test_wp10_dev_csrf` |
+| `gameplay/` | models & snapshots, scheduler, round API, progression, streaks, stats | `test_wp03_models_and_snapshots`, `test_wp05_scheduler`, `test_wp06_round_api`, `test_wp_progression`, `test_wp11_streaks`, `test_wp11_stats` |
+| `ai/` | Gemini cold-start worker + its backfill command | `test_wp07_gemini_worker`, `test_backfill_ai_estimates` |
+| `daily_wave/` | Daily Wave generation + play API | `test_wp11_daily_wave`, `test_wp12_daily_wave_api` |
+| `contributions/` | content submission, voting, challenges, scale requests, `pair_all` | `test_wp11_content`, `test_wp_voting`, `test_wp_challenge`, `test_wp_scale_request`, `test_pair_all` |
+| `research/` | dataset export, statistics, admin dashboard | `test_wp13_dataset` |
+
+`bglib/tests/test_scoring.py` (the pure scoring library, formerly "WP-02") kept its name.
+Frontend tests were already colocated next to their components, so only their WP-labelled
+docstring titles were refreshed.

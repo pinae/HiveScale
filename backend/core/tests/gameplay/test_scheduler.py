@@ -1,4 +1,4 @@
-"""WP-05 red tests: the pairing scheduler.
+"""The pairing scheduler.
 
 Executable spec (docs/hivescale-plan.md, WP-05 + §1.6/§1.7):
 - 30/60/10 mix of under-sampled / well-sampled / fresh pairings, verified by a

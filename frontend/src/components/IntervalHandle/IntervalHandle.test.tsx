@@ -1,5 +1,5 @@
 /**
- * WP-08 red tests: IntervalHandle — one draggable edge of the confidence band.
+ * IntervalHandle — one draggable edge of the confidence band.
  */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

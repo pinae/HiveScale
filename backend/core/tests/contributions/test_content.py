@@ -1,4 +1,4 @@
-"""WP-11: level-gated content submission + LLM sanity check (plan §1.6)."""
+"""Level-gated content submission + LLM sanity check (plan §1.6)."""
 
 import pytest
 from rest_framework.test import APIClient

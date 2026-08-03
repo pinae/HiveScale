@@ -1,4 +1,4 @@
-"""WP-11: calibration archetypes and the /api/me/stats/ endpoint (plan §2.2)."""
+"""Calibration archetypes and the /api/me/stats/ endpoint (plan §2.2)."""
 
 import pytest
 from rest_framework import status

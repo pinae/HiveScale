@@ -1,5 +1,5 @@
 /**
- * WP-08 rework: the pure interval interaction model. This is where the tricky
+ * The pure interval interaction model. This is where the tricky
  * usability rules are pinned down so the component wiring can stay thin.
  */
 import { describe, expect, it } from "vitest";

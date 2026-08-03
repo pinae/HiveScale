@@ -1,5 +1,5 @@
 /**
- * WP-09 red tests: RevealWave — the emotional payoff moment.
+ * RevealWave — the emotional payoff moment.
  *
  * Spec (plan §2.1/§2.4/WP-09): the crowd histogram, the player's marker, a
  * count-up score whose final numbers match the payload, a percentile stinger,

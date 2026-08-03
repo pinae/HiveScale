@@ -1,5 +1,5 @@
 /**
- * WP-10 flows (against MSW): a happy round, a pioneer round, the too-fast toast,
+ * Game-loop flows (against MSW): a happy round, a pioneer round, the too-fast toast,
  * next-round preloading during the reveal, and error/offline retry.
  */
 import { render, screen, waitFor, within } from "@testing-library/react";

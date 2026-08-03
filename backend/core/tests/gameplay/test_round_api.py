@@ -1,4 +1,4 @@
-"""WP-06 red tests: the round API (deal -> guess -> score -> reveal).
+"""The round API (deal -> guess -> score -> reveal).
 
 Executable spec (docs/hivescale-plan.md, WP-06 + §1.4/§1.5/§1.7):
 - ``GET /api/round/next/`` deals a *blind* round bound to a signed round token;

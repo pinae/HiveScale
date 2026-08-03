@@ -1,4 +1,4 @@
-"""WP-04 red tests: anonymous sessions & players.
+"""Anonymous sessions & players.
 
 Executable spec (docs/hivescale-plan.md, WP-04):
 - new device -> new player; same token -> same player

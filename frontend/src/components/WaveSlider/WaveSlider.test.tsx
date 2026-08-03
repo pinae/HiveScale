@@ -1,5 +1,5 @@
 /**
- * WP-08: WaveSlider DOM behaviour. The interval maths are proven in
+ * WaveSlider DOM behaviour. The interval maths are proven in
  * interval-model.test.ts; here we pin the gesture wiring — including the bugs
  * the rework fixed: interval ends are draggable independently and pressing them
  * no longer jumps the centre.

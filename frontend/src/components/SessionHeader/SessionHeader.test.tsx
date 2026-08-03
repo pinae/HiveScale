@@ -1,5 +1,5 @@
 /**
- * WP-10: SessionHeader — brand + running score, with the streak flame gated.
+ * SessionHeader — brand + running score, with the streak flame gated.
  */
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

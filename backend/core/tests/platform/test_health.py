@@ -1,4 +1,4 @@
-"""WP-01 red test: the API must expose a health endpoint.
+"""The API must expose a health endpoint.
 
 Written before any view exists — this test MUST fail first (TDD red),
 then the health view is implemented to turn it green.

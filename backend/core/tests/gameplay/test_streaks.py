@@ -1,4 +1,4 @@
-"""WP-11: daily-play streak logic (plan §2.2)."""
+"""Daily-play streak logic (plan §2.2)."""
 
 import datetime
 

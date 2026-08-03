@@ -1,4 +1,4 @@
-"""WP-13: research export, statistics, and the admin dashboard.
+"""Research export, statistics, and the admin dashboard.
 
 Executable spec (docs/hivescale-plan.md, WP-13):
 - the export writes the named-dimension embedding matrix + per-pairing stats with

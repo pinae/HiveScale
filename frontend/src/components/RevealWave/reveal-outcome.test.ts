@@ -1,5 +1,5 @@
 /**
- * WP-09 red tests: outcome classification + flavour quips + beat-the-bot maths.
+ * Outcome classification + flavour quips + beat-the-bot maths.
  */
 import { describe, expect, it } from "vitest";
 
