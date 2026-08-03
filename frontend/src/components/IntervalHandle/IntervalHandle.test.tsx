@@ -26,6 +26,13 @@ describe("IntervalHandle", () => {
     expect(handle).toHaveStyle({ "--bsg-handle-drop": "0.5" });
   });
 
+  it("squares the corner nearest the scale via data-point", () => {
+    render(
+      <IntervalHandle label="Left spread" sigma={10} sigmaMax={100} leftFraction={0.3} pointSide="left" />,
+    );
+    expect(screen.getByRole("slider", { name: /left spread/i })).toHaveAttribute("data-point", "left");
+  });
+
   it("nudges by ±step on arrow keys", () => {
     const onNudge = vi.fn();
     render(

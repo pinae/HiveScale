@@ -20,6 +20,8 @@ export interface IntervalHandleProps {
   drop?: number;
   /** True when σ has passed the wall and the knob is dropped off the scale. */
   offScale?: boolean;
+  /** Visual side of the scale, so the corner nearest it is squared into a drop. */
+  pointSide?: "left" | "right";
   disabled?: boolean;
   /** Called with a signed multiple of `step` when an arrow key is pressed. */
   onNudge?: (delta: number) => void;
@@ -36,6 +38,7 @@ export default function IntervalHandle({
   leftFraction,
   drop = 0,
   offScale = false,
+  pointSide,
   disabled = false,
   onNudge,
   step = 1,
@@ -67,6 +70,7 @@ export default function IntervalHandle({
       className="bsg-interval-handle"
       data-disabled={disabled || undefined}
       data-offscale={offScale || undefined}
+      data-point={pointSide}
       style={{ left: `${leftFraction * 100}%`, "--bsg-handle-drop": drop } as CSSProperties}
       onKeyDown={handleKeyDown}
       onPointerDown={disabled ? undefined : onPointerDown}
