@@ -7,28 +7,32 @@
  * shaping — and being scored on. All interval maths live in `interval-model.ts`;
  * this file is the thin translation of gestures to those pure calls:
  *
- * - **white dot** — drag horizontally to move the centre (the interval travels
- *   with it); drag *up* to widen the bell, *down* to narrow it. Each side clamps
- *   to its own wall, so pushed against an edge the guess turns asymmetric;
- * - **interval ends** — drag each independently; the centre stays inside and is
- *   pushed only when an end would cross it;
+ * - **white dot** — drag horizontally to move the centre (the bell travels with
+ *   it); drag *up* to widen the bell, *down* to narrow it;
+ * - **σ handles** — two knobs on a sub-rail beneath the scale set each side's
+ *   spread independently. Drag one outward along the rail to grow σ; once it
+ *   reaches the wall it hangs *down* a wall-drop, and dragging further down keeps
+ *   growing σ past the scale edge (a wide, flat truncated bell) — no horizontal
+ *   scroll. At σ→0 they park either side of the dot so they never hide behind it;
  * - **wheel over the engaged dot** — up widens, down narrows;
  * - **empty track** — tap to place the centre there.
  *
- * The centre and both interval bounds are ARIA sliders, so the whole control is
- * keyboard-operable (arrows move the centre, shift+arrows resize, the bounds
- * nudge with their own arrows).
+ * The centre and both σ handles are ARIA sliders, so the whole control is
+ * keyboard-operable (arrows move the centre, shift+arrows resize both sides, each
+ * σ handle's arrows grow/shrink that side's spread — off the scale too).
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 
 import IntervalHandle from "../IntervalHandle";
 import {
-  dragEnd,
   effectiveBounds,
+  handlePlacement,
   moveCenter,
   resizeSpread,
+  setSigma,
   setSpread,
+  sigmaCap,
   type GuessValue,
 } from "./interval-model";
 import { bellGeometry } from "./normal";
@@ -38,6 +42,14 @@ export type { GuessValue };
 //: The bell is drawn in this viewBox and stretched to the track width.
 const CURVE_VW = 1000;
 const CURVE_VH = 260;
+
+//: Sub-rail geometry. Handles ride a rail this many px below the track; past the
+//: wall they hang down up to RAIL_DROP_PX (kept in sync with the CSS variables).
+const RAIL_OFFSET_PX = 14;
+
+//: A σ handle is never drawn closer than this fraction of the track to the
+//: centre, so at σ→0 the two handles stay visible either side of the dot.
+const HANDLE_MIN_GAP = 0.05;
 
 export interface WaveSliderProps {
   value: GuessValue;
@@ -102,6 +114,21 @@ export default function WaveSlider({
   const toRatio = (x: number) => (max > min ? (x - min) / (max - min) : 0);
   const toLeft = (x: number) => (dir === "rtl" ? 1 - toRatio(x) : toRatio(x));
 
+  const cap = sigmaCap(min, max);
+  const centerFrac = toLeft(center);
+  const leftPlacement = handlePlacement("lower", center, value.widthLeft, min, max);
+  const rightPlacement = handlePlacement("upper", center, value.widthRight, min, max);
+  // Screen fraction with RTL mirroring and a min-gap so a small-σ handle never
+  // hides under the dot (or the other handle).
+  const handleFraction = (side: "lower" | "upper", frac: number, offScale: boolean) => {
+    let f = dir === "rtl" ? 1 - frac : frac;
+    if (!offScale) {
+      const onLeft = (side === "lower") !== (dir === "rtl");
+      f = onLeft ? Math.min(f, centerFrac - HANDLE_MIN_GAP) : Math.max(f, centerFrac + HANDLE_MIN_GAP);
+    }
+    return clamp(f, 0, 1);
+  };
+
   const gradientId = useId();
   const bell = useMemo(
     () => bellGeometry(value, min, max, CURVE_VW, CURVE_VH, dir),
@@ -157,18 +184,52 @@ export default function WaveSlider({
     [emit, positionFromClientX, min, max],
   );
 
-  const applyEndDrag = useCallback(
-    (side: "lower" | "upper", clientX: number) => {
-      emit(dragEnd(valueRef.current, side, positionFromClientX(clientX), min, max));
+  // Continuous scale value from a pointer X, NOT clamped to [min, max] — a σ
+  // handle needs to know when the pointer has passed the wall.
+  const rawValueFromClientX = useCallback(
+    (clientX: number) => {
+      const track = trackRef.current;
+      if (!track) return valueRef.current.center;
+      const rect = track.getBoundingClientRect();
+      let ratio = rect.width ? (clientX - rect.left) / rect.width : 0;
+      if (dir === "rtl") ratio = 1 - ratio;
+      return min + ratio * (max - min);
     },
-    [emit, positionFromClientX, min, max],
+    [dir, min, max],
+  );
+
+  // Drag a σ handle: horizontal distance from the centre sets σ up to the wall;
+  // once at the wall, dragging *down* the wall-rail pushes σ past it. So σ can
+  // grow beyond the scale using vertical space, never horizontal scroll.
+  const applySigmaDrag = useCallback(
+    (side: "lower" | "upper", clientX: number, clientY: number) => {
+      const track = trackRef.current;
+      const v = valueRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const pointerValue = rawValueFromClientX(clientX);
+      const wall = side === "lower" ? v.center - min : max - v.center;
+      const horizontal = side === "lower" ? v.center - pointerValue : pointerValue - v.center;
+
+      let sigma = clamp(horizontal, 0, wall);
+      if (horizontal >= wall - 1e-6) {
+        // At (or past) the wall — the extra spread comes from the downward drag.
+        const cornerY = rect.bottom + RAIL_OFFSET_PX;
+        const dropPx = Math.max(0, clientY - cornerY);
+        const unitsPerPx = rect.width ? (max - min) / rect.width : 0;
+        sigma = wall + dropPx * unitsPerPx;
+      }
+      sigma = Math.round(sigma / step) * step;
+      emit(setSigma(v, side, sigma, min, max));
+    },
+    [emit, rawValueFromClientX, min, max, step],
   );
 
   useEffect(() => {
     if (!dragTarget) return;
     const onMove = (ev: globalThis.PointerEvent) => {
       if (dragTarget === "center") applyCenterDrag(ev.clientX, ev.clientY);
-      else applyEndDrag(dragTarget, ev.clientX);
+      else applySigmaDrag(dragTarget, ev.clientX, ev.clientY);
     };
     const onUp = () => setDragTarget(null);
     window.addEventListener("pointermove", onMove);
@@ -179,7 +240,7 @@ export default function WaveSlider({
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [dragTarget, applyCenterDrag, applyEndDrag]);
+  }, [dragTarget, applyCenterDrag, applySigmaDrag]);
 
   // Wheel resizes the spread, but only while the dot is engaged (focused), so
   // idle hover never hijacks page scroll. Up widens, down narrows. Non-passive
@@ -244,16 +305,12 @@ export default function WaveSlider({
     if (handled) ev.preventDefault();
   }
 
-  const nudgeLower = (delta: number) => {
-    const v = valueRef.current;
-    const b = effectiveBounds(v, min, max);
-    emit(dragEnd(v, "lower", b.lower + delta, min, max));
-  };
-  const nudgeUpper = (delta: number) => {
-    const v = valueRef.current;
-    const b = effectiveBounds(v, min, max);
-    emit(dragEnd(v, "upper", b.upper + delta, min, max));
-  };
+  // A σ handle's arrows grow/shrink that side's spread directly (past the wall
+  // too), so the whole control — including off-scale spread — is keyboard-usable.
+  const nudgeLeftSigma = (delta: number) =>
+    emit(setSigma(valueRef.current, "lower", valueRef.current.widthLeft + delta, min, max));
+  const nudgeRightSigma = (delta: number) =>
+    emit(setSigma(valueRef.current, "upper", valueRef.current.widthRight + delta, min, max));
 
   return (
     <div className="bsg-slider" data-disabled={disabled || undefined} dir={dir}>
@@ -310,6 +367,20 @@ export default function WaveSlider({
             style={{ left: `${toLeft(tick) * 100}%` }}
           />
         ))}
+        {/* Sub-rail the σ handles ride, with a wall-drop hanging below each end
+            so a handle pushed past the scale has somewhere to go (down, not off
+            the side). */}
+        <div className="bsg-slider-subrail" aria-hidden="true" />
+        <div
+          className="bsg-slider-walldrop"
+          aria-hidden="true"
+          style={{ left: `${toLeft(min) * 100}%` }}
+        />
+        <div
+          className="bsg-slider-walldrop"
+          aria-hidden="true"
+          style={{ left: `${toLeft(max) * 100}%` }}
+        />
         <div
           className="bsg-slider-band"
           aria-hidden="true"
@@ -323,25 +394,27 @@ export default function WaveSlider({
           }}
         />
         <IntervalHandle
-          label="Interval lower bound"
-          position={lower}
-          min={min}
-          max={max}
+          label="Left spread"
+          sigma={value.widthLeft}
+          sigmaMax={cap}
+          leftFraction={handleFraction("lower", leftPlacement.frac, leftPlacement.offScale)}
+          drop={leftPlacement.drop}
+          offScale={leftPlacement.offScale}
           step={step}
-          dir={dir}
           disabled={disabled}
-          onNudge={nudgeLower}
+          onNudge={nudgeLeftSigma}
           onPointerDown={(ev) => startEndDrag("lower", ev)}
         />
         <IntervalHandle
-          label="Interval upper bound"
-          position={upper}
-          min={min}
-          max={max}
+          label="Right spread"
+          sigma={value.widthRight}
+          sigmaMax={cap}
+          leftFraction={handleFraction("upper", rightPlacement.frac, rightPlacement.offScale)}
+          drop={rightPlacement.drop}
+          offScale={rightPlacement.offScale}
           step={step}
-          dir={dir}
           disabled={disabled}
-          onNudge={nudgeUpper}
+          onNudge={nudgeRightSigma}
           onPointerDown={(ev) => startEndDrag("upper", ev)}
         />
         <div

@@ -2,22 +2,22 @@
  * Pure interaction model for the WaveSlider (WP-08).
  *
  * A guess is `{ center, widthLeft, widthRight }` on a `[min, max]` scale, where
- * the widths are the player's *desired* half-widths. The visible/submittable
- * interval is those widths clamped so neither border leaves the scale — which is
- * what makes the interval "breathe":
+ * the widths are the per-side **standard deviations** of the guessed bell — a
+ * free shape parameter, not the interval edge. σ ranges over `[0, sigmaCap]`
+ * (the full scale span); the scale walls only *truncate the display*, they no
+ * longer cap σ. That's what lets a guess pinned near a wall still carry a lot of
+ * mass at the wall (a wide, flat truncated bell).
  *
- * - dragging the centre keeps the desired widths, so a side squashed against a
- *   wall grows back to its desired size as the centre moves away again;
- * - dragging one end sets that border, keeps the other border fixed, and only
- *   nudges the centre when the end would otherwise cross it (the centre always
- *   stays inside the interval);
- * - the wheel / vertical drag change the *spread*: dragging up (or wheeling up)
- *   widens, down narrows. Each side is clamped to its own wall independently, so
- *   when one side reaches a wall it stops while the other keeps growing — that's
- *   what turns a symmetric guess into an asymmetric one near an extreme.
+ * - dragging the centre moves the mean, widths riding along;
+ * - the wheel / centre vertical drag change *both* widths together (spread);
+ * - each σ handle sets one side's σ directly — dragging it out along the scale,
+ *   then *down* the rail's wall-drop to push σ past the wall (see
+ *   {@link handlePlacement});
+ * - `effectiveBounds` is the in-scale ±1σ interval (clamped to the walls), used
+ *   only for the display band / guide lines.
  *
- * No border ever leaves `[min, max]`. Every function is pure so the component
- * wiring stays a thin translation of pointer/keyboard events to these calls.
+ * Every function is pure so the component wiring stays a thin translation of
+ * pointer/keyboard events to these calls.
  */
 
 export interface GuessValue {
@@ -33,7 +33,14 @@ export interface Bounds {
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
-/** The visible interval: desired widths clamped so no border leaves the scale. */
+/** The largest σ a handle can express — the full scale span. At this value the
+ * handle has dropped all the way down its wall-rail and the truncated bell is
+ * nearly flat. */
+export function sigmaCap(min: number, max: number): number {
+  return Math.max(1, max - min);
+}
+
+/** The visible ±1σ interval: widths clamped so no border leaves the scale. */
 export function effectiveBounds(v: GuessValue, min: number, max: number): Bounds {
   return {
     lower: Math.max(min, v.center - v.widthLeft),
@@ -41,40 +48,15 @@ export function effectiveBounds(v: GuessValue, min: number, max: number): Bounds
   };
 }
 
-/** Move the centre; desired widths are preserved (the interval travels along). */
+/** Move the centre; widths are preserved (the bell travels along). */
 export function moveCenter(v: GuessValue, targetCenter: number, min: number, max: number): GuessValue {
   return { ...v, center: clamp(targetCenter, min, max) };
 }
 
 /**
- * Drag one interval end to `targetPos`. The opposite border stays put; the
- * centre only moves if the dragged end would cross it (the interval can shrink
- * to zero but never invert), and the new widths become the desired widths.
- */
-export function dragEnd(
-  v: GuessValue,
-  side: "lower" | "upper",
-  targetPos: number,
-  min: number,
-  max: number,
-): GuessValue {
-  const { lower, upper } = effectiveBounds(v, min, max);
-  const p = clamp(targetPos, min, max);
-  if (side === "upper") {
-    const newUpper = Math.max(p, lower);
-    const newCenter = clamp(v.center, lower, newUpper);
-    return { center: newCenter, widthLeft: newCenter - lower, widthRight: newUpper - newCenter };
-  }
-  const newLower = Math.min(p, upper);
-  const newCenter = clamp(v.center, newLower, upper);
-  return { center: newCenter, widthLeft: newCenter - newLower, widthRight: upper - newCenter };
-}
-
-/**
- * Set each half-width toward a target, clamped to its own wall. The centre is
- * untouched. Because the two sides clamp independently, pushing both outward near
- * an edge stops the wall-side while the other keeps growing — an asymmetric
- * distribution — and neither border leaves the scale.
+ * Set both half-widths toward a target, clamped to `[0, sigmaCap]`. The centre is
+ * untouched. (The wall no longer caps σ — a side can be wider than its distance
+ * to the wall, which the display truncates.)
  */
 export function setSpread(
   v: GuessValue,
@@ -83,18 +65,65 @@ export function setSpread(
   min: number,
   max: number,
 ): GuessValue {
+  const cap = sigmaCap(min, max);
   return {
     center: v.center,
-    widthLeft: clamp(targetLeft, 0, v.center - min),
-    widthRight: clamp(targetRight, 0, max - v.center),
+    widthLeft: clamp(targetLeft, 0, cap),
+    widthRight: clamp(targetRight, 0, cap),
   };
 }
 
-/**
- * Grow (delta > 0) or shrink (delta < 0) both half-widths by `delta`, each
- * clamped to its wall. Used by the wheel and keyboard; the vertical drag uses
- * {@link setSpread} against the widths captured when the drag began.
- */
+/** Grow (delta > 0) or shrink (delta < 0) both half-widths by `delta`, capped at
+ * `sigmaCap`. Used by the wheel and keyboard. */
 export function resizeSpread(v: GuessValue, delta: number, min: number, max: number): GuessValue {
   return setSpread(v, v.widthLeft + delta, v.widthRight + delta, min, max);
+}
+
+/** Set one side's σ directly (the σ-handle drag / keyboard), capped at `sigmaCap`. */
+export function setSigma(
+  v: GuessValue,
+  side: "lower" | "upper",
+  sigma: number,
+  min: number,
+  max: number,
+): GuessValue {
+  const s = clamp(sigma, 0, sigmaCap(min, max));
+  return side === "lower" ? { ...v, widthLeft: s } : { ...v, widthRight: s };
+}
+
+export interface HandlePlacement {
+  /** Fraction across the scale `[min, max]` (0 = min, 1 = max), before RTL mirroring. */
+  frac: number;
+  /** How far the handle has dropped below the rail, 0 (at/inside the wall) → 1 (σ = cap). */
+  drop: number;
+  /** Whether σ exceeds the wall, so the handle is pinned at the wall and dropped. */
+  offScale: boolean;
+}
+
+/**
+ * Where a σ handle sits. While σ fits inside the scale the handle rides the rail
+ * at `center ∓ σ`; once σ passes the wall it pins at the wall and *drops* — the
+ * overflow (`σ − wall`) mapped onto `[0, 1]` of the vertical wall-rail, so bigger
+ * σ hangs lower. This is what lets σ grow past the wall using vertical space
+ * instead of horizontal scroll.
+ */
+export function handlePlacement(
+  side: "lower" | "upper",
+  center: number,
+  sigma: number,
+  min: number,
+  max: number,
+): HandlePlacement {
+  const span = Math.max(1, max - min);
+  const wall = side === "lower" ? center - min : max - center;
+  if (sigma <= wall) {
+    const value = side === "lower" ? center - sigma : center + sigma;
+    return { frac: (value - min) / span, drop: 0, offScale: false };
+  }
+  const capOverflow = Math.max(1, sigmaCap(min, max) - wall);
+  return {
+    frac: side === "lower" ? 0 : 1,
+    drop: clamp((sigma - wall) / capOverflow, 0, 1),
+    offScale: true,
+  };
 }

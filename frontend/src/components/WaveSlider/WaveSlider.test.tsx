@@ -31,19 +31,21 @@ function mockTrack(container: HTMLElement, width = 200, height = 40) {
 }
 
 const guess = () => screen.getByRole("slider", { name: /your guess/i });
-const lower = () => screen.getByRole("slider", { name: /lower bound/i });
-const upper = () => screen.getByRole("slider", { name: /upper bound/i });
+const leftSigma = () => screen.getByRole("slider", { name: /left spread/i });
+const rightSigma = () => screen.getByRole("slider", { name: /right spread/i });
 const now = (el: HTMLElement) => el.getAttribute("aria-valuenow");
 
 describe("WaveSlider — ARIA & keyboard", () => {
-  it("exposes slider semantics for the guess and both interval bounds", () => {
+  it("exposes slider semantics: the centre on the scale, each σ as a 0…span spread", () => {
     render(<Harness />);
     expect(guess()).toHaveAttribute("aria-valuemin", "0");
     expect(guess()).toHaveAttribute("aria-valuemax", "100");
     expect(guess()).toHaveAttribute("aria-valuenow", "50");
     expect(guess()).toHaveAttribute("aria-orientation", "horizontal");
-    expect(now(lower())).toBe("38");
-    expect(now(upper())).toBe("62");
+    // The σ handles report the standard deviation, 0…span (100), not a position.
+    expect(leftSigma()).toHaveAttribute("aria-valuemax", "100");
+    expect(now(leftSigma())).toBe("12");
+    expect(now(rightSigma())).toBe("12");
   });
 
   it("moves the centre with arrows and jumps to the poles with Home/End", () => {
@@ -74,19 +76,27 @@ describe("WaveSlider — ARIA & keyboard", () => {
     expect(onChange.mock.calls[2][0].center).toBe(53);
   });
 
-  it("resizes symmetrically with shift+arrows", () => {
+  it("resizes both sides with shift+arrows", () => {
     render(<Harness />);
     fireEvent.keyDown(guess(), { key: "ArrowRight", shiftKey: true });
-    expect(now(lower())).toBe("37");
-    expect(now(upper())).toBe("63");
+    expect(now(leftSigma())).toBe("13");
+    expect(now(rightSigma())).toBe("13");
   });
 
-  it("nudges each bound independently with its own arrows", () => {
+  it("nudges each side's σ independently with the handle's own arrows", () => {
     render(<Harness />);
-    fireEvent.keyDown(lower(), { key: "ArrowRight" }); // lower bound inward
-    expect(now(lower())).toBe("39");
-    expect(now(upper())).toBe("62"); // untouched
+    fireEvent.keyDown(leftSigma(), { key: "ArrowRight" }); // grow the left spread
+    expect(now(leftSigma())).toBe("13");
+    expect(now(rightSigma())).toBe("12"); // untouched
     expect(now(guess())).toBe("50"); // centre untouched
+  });
+
+  it("keyboard grows σ past the wall (off the scale)", () => {
+    render(<Harness initial={{ center: 96, widthLeft: 12, widthRight: 4 }} />);
+    // Right wall is 4; nudging up keeps growing σ beyond it.
+    for (let i = 0; i < 10; i++) fireEvent.keyDown(rightSigma(), { key: "ArrowUp" });
+    expect(now(rightSigma())).toBe("14"); // 4 + 10, well past the wall
+    expect(rightSigma()).toHaveAttribute("data-offscale", "true");
   });
 
   it("emits the whole guess shape", () => {
@@ -98,33 +108,45 @@ describe("WaveSlider — ARIA & keyboard", () => {
 });
 
 describe("WaveSlider — pointer", () => {
-  it("drags the white dot: the interval travels with the centre", () => {
+  it("drags the white dot: the centre moves, the σ ride along unchanged", () => {
     const { container } = render(<Harness />);
     mockTrack(container);
     fireEvent.pointerDown(guess(), { clientX: 100, clientY: 20, pointerId: 1 });
     fireEvent.pointerMove(window, { clientX: 150, clientY: 20, pointerId: 1 });
     expect(now(guess())).toBe("75");
-    expect(now(lower())).toBe("63"); // 75 - 12
-    expect(now(upper())).toBe("87"); // 75 + 12
+    expect(now(leftSigma())).toBe("12"); // spread unchanged by a horizontal move
+    expect(now(rightSigma())).toBe("12");
     fireEvent.pointerUp(window, { pointerId: 1 });
   });
 
-  it("drags an interval end independently without moving the centre", () => {
+  it("drags a σ handle to set that side's spread, without moving the centre", () => {
     const { container } = render(<Harness />);
     mockTrack(container);
-    fireEvent.pointerDown(upper(), { clientX: 124, clientY: 20, pointerId: 1 });
-    fireEvent.pointerMove(window, { clientX: 140, clientY: 20, pointerId: 1 }); // -> 70
-    expect(now(upper())).toBe("70");
-    expect(now(lower())).toBe("38"); // untouched
+    fireEvent.pointerDown(rightSigma(), { clientX: 124, clientY: 20, pointerId: 1 });
+    fireEvent.pointerMove(window, { clientX: 140, clientY: 20, pointerId: 1 }); // value 70 -> σ 20
+    expect(now(rightSigma())).toBe("20");
+    expect(now(leftSigma())).toBe("12"); // untouched
     expect(now(guess())).toBe("50"); // centre stays put
     fireEvent.pointerUp(window, { pointerId: 1 });
   });
 
-  it("pressing an interval end does not jump the centre (the reported bug)", () => {
+  it("pushes a σ handle past the wall by dragging down the wall-drop", () => {
+    const { container } = render(<Harness initial={{ center: 95, widthLeft: 12, widthRight: 5 }} />);
+    mockTrack(container, 200, 40); // bottom 40 -> rail corner at y = 54; 0.5 units/px
+    fireEvent.pointerDown(rightSigma(), { clientX: 200, clientY: 54, pointerId: 1 }); // at the wall
+    // Drag straight down 40px past the corner: σ = wall(5) + 40 * 0.5 = 25.
+    fireEvent.pointerMove(window, { clientX: 200, clientY: 94, pointerId: 1 });
+    expect(now(rightSigma())).toBe("25");
+    expect(rightSigma()).toHaveAttribute("data-offscale", "true");
+    expect(now(guess())).toBe("95"); // centre untouched
+    fireEvent.pointerUp(window, { pointerId: 1 });
+  });
+
+  it("pressing a σ handle does not jump the centre", () => {
     const { container } = render(<Harness />);
     mockTrack(container);
-    fireEvent.pointerDown(lower(), { clientX: 10, clientY: 20, pointerId: 1 });
-    expect(now(guess())).toBe("50"); // would have jumped toward 10 before the fix
+    fireEvent.pointerDown(leftSigma(), { clientX: 10, clientY: 20, pointerId: 1 });
+    expect(now(guess())).toBe("50");
     fireEvent.pointerUp(window, { pointerId: 1 });
   });
 
@@ -136,16 +158,14 @@ describe("WaveSlider — pointer", () => {
     fireEvent.pointerUp(window, { pointerId: 1 });
   });
 
-  it("squashes a side at the wall and restores it on the way back", () => {
+  it("a horizontal dot-drag preserves the σ as the centre crosses a wall", () => {
     const { container } = render(<Harness initial={{ center: 20, widthLeft: 20, widthRight: 20 }} />);
     mockTrack(container);
     fireEvent.pointerDown(guess(), { clientX: 40, clientY: 20, pointerId: 1 });
     fireEvent.pointerMove(window, { clientX: 0, clientY: 20, pointerId: 1 }); // centre -> 0
-    expect(now(lower())).toBe("0");
-    expect(now(upper())).toBe("20");
-    fireEvent.pointerMove(window, { clientX: 50, clientY: 20, pointerId: 1 }); // centre -> 25
-    expect(now(lower())).toBe("5"); // left side grew back
-    expect(now(upper())).toBe("45");
+    expect(now(guess())).toBe("0");
+    expect(now(leftSigma())).toBe("20"); // σ kept even though the display clamps
+    expect(now(rightSigma())).toBe("20");
     fireEvent.pointerUp(window, { pointerId: 1 });
   });
 
@@ -153,25 +173,24 @@ describe("WaveSlider — pointer", () => {
     const { container } = render(<Harness />);
     mockTrack(container, 200, 40); // midY = 20, dead-zone = 40px, 0.5 units/px
     fireEvent.pointerDown(guess(), { clientX: 100, clientY: 20, pointerId: 1 });
-    // Up past the dead-zone: dy 60 -> 20px -> +10 units on both sides (12 -> 22).
+    // Up past the dead-zone: dy 60 -> 20px -> +10 on both σ (12 -> 22).
     fireEvent.pointerMove(window, { clientX: 100, clientY: -40, pointerId: 1 });
-    expect(now(lower())).toBe("28");
-    expect(now(upper())).toBe("72");
-    // Down past the dead-zone: relative to the grab, -10 units (12 -> 2).
+    expect(now(leftSigma())).toBe("22");
+    expect(now(rightSigma())).toBe("22");
+    // Down past the dead-zone: relative to the grab, -10 (12 -> 2).
     fireEvent.pointerMove(window, { clientX: 100, clientY: 80, pointerId: 1 });
-    expect(now(lower())).toBe("48");
-    expect(now(upper())).toBe("52");
+    expect(now(leftSigma())).toBe("2");
+    expect(now(rightSigma())).toBe("2");
     fireEvent.pointerUp(window, { pointerId: 1 });
   });
 
-  it("clamps one side at the wall while the other keeps growing (asymmetric)", () => {
+  it("the centre widen now grows both sides past the wall together (symmetric)", () => {
     const { container } = render(<Harness initial={{ center: 20, widthLeft: 5, widthRight: 5 }} />);
     mockTrack(container, 200, 40);
     fireEvent.pointerDown(guess(), { clientX: 40, clientY: 20, pointerId: 1 }); // centre stays 20
-    // Big widen: +40 units. Left can only reach the wall at 0; right keeps going.
-    fireEvent.pointerMove(window, { clientX: 40, clientY: -100, pointerId: 1 });
-    expect(now(lower())).toBe("0"); // left pinned at the wall
-    expect(now(upper())).toBe("65"); // right grew past it -> asymmetric
+    fireEvent.pointerMove(window, { clientX: 40, clientY: -100, pointerId: 1 }); // +40 both sides
+    expect(now(leftSigma())).toBe("45"); // left no longer stops at the wall
+    expect(now(rightSigma())).toBe("45");
     fireEvent.pointerUp(window, { pointerId: 1 });
   });
 
@@ -180,8 +199,8 @@ describe("WaveSlider — pointer", () => {
     const track = mockTrack(container);
     guess().focus();
     fireEvent.wheel(track, { deltaY: -100 }); // wider by WHEEL_STEP (3): 12 -> 15
-    expect(now(lower())).toBe("35");
-    expect(now(upper())).toBe("65");
+    expect(now(leftSigma())).toBe("15");
+    expect(now(rightSigma())).toBe("15");
   });
 });
 

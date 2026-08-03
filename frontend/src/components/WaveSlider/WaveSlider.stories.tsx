@@ -70,15 +70,15 @@ export const KeyboardControl: Story = {
       await expect(thumb).toHaveAttribute("aria-valuenow", "55");
     });
 
-    await step("Shift+Arrow resizes the interval", async () => {
+    await step("Shift+Arrow grows both σ", async () => {
       await userEvent.keyboard("{Shift>}{ArrowRight}{/Shift}");
-      await expect(canvas.getByRole("slider", { name: /upper bound/i })).toHaveAttribute(
+      await expect(canvas.getByRole("slider", { name: /right spread/i })).toHaveAttribute(
         "aria-valuenow",
-        "68",
+        "13",
       );
-      await expect(canvas.getByRole("slider", { name: /lower bound/i })).toHaveAttribute(
+      await expect(canvas.getByRole("slider", { name: /left spread/i })).toHaveAttribute(
         "aria-valuenow",
-        "42",
+        "13",
       );
     });
   },

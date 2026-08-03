@@ -65,9 +65,38 @@ body {
 
 .bsg-slider {
   --bsg-thumb-size: 32px;
+  /* Sub-rail the σ handles ride, and how far they can hang below it past a wall.
+     Keep RAIL_OFFSET_PX / RAIL_DROP_PX in WaveSlider.tsx in sync with these. */
+  --bsg-rail-offset: 14px;
+  --bsg-rail-drop: 40px;
   padding: calc(var(--bsg-thumb-size) / 2) calc(var(--bsg-thumb-size) / 2 + 4px);
+  /* Extra room below the track for the sub-rail + wall-drop. */
+  padding-bottom: calc(var(--bsg-rail-offset) + var(--bsg-rail-drop) + 12px);
   touch-action: none;
   user-select: none;
+}
+
+.bsg-slider-subrail {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + var(--bsg-rail-offset));
+  height: 2px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bsg-wave-deep) 45%, transparent);
+}
+
+.bsg-slider-walldrop {
+  position: absolute;
+  top: calc(100% + var(--bsg-rail-offset));
+  width: 2px;
+  height: var(--bsg-rail-drop);
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    color-mix(in srgb, var(--bsg-wave-deep) 55%, transparent) 0 3px,
+    transparent 3px 7px
+  );
 }
 
 /* The interactive bell sits directly above the scale line and stretches to the
@@ -146,10 +175,17 @@ body {
 
 .bsg-slider[data-disabled] .bsg-slider-band { cursor: not-allowed; }
 
-.bsg-slider-thumb,
-.bsg-interval-handle {
+.bsg-slider-thumb {
   position: absolute;
   top: 50%;
+  border: none;
+  cursor: grab;
+}
+
+.bsg-interval-handle {
+  position: absolute;
+  /* On the sub-rail below the track; drops toward RAIL_DROP as σ passes the wall. */
+  top: calc(100% + var(--bsg-rail-offset) + var(--bsg-handle-drop, 0) * var(--bsg-rail-drop));
   border: none;
   cursor: grab;
 }
@@ -176,6 +212,13 @@ body {
   border-radius: 6px;
   background: var(--bsg-wave);
   box-shadow: 0 2px 6px rgb(0 0 0 / 40%);
+}
+
+/* A σ handle pushed past the wall glows so it's clear it now represents spread
+   that extends beyond the scale edge. */
+.bsg-interval-handle[data-offscale] {
+  background: var(--bsg-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--bsg-accent) 65%, transparent);
 }
 
 .bsg-slider[data-disabled] .bsg-slider-thumb,

@@ -1,42 +1,46 @@
 /**
- * One draggable edge of the confidence interval. Presentational + accessible:
- * it renders an ARIA slider knob at `position` and reports keyboard nudges and
- * pointer presses upward; WaveSlider owns the interval maths.
+ * One σ (standard-deviation) handle of the guess bell. Presentational +
+ * accessible: it renders an ARIA slider knob on the sub-rail beneath the scale
+ * and reports keyboard nudges and pointer presses upward; WaveSlider owns the
+ * geometry (where along the rail it sits, and how far it has dropped below the
+ * wall) and the σ maths.
  */
-import type { KeyboardEvent, PointerEvent } from "react";
+import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 
 export interface IntervalHandleProps {
-  /** Accessible name, e.g. "Interval lower bound". */
+  /** Accessible name, e.g. "Left spread". */
   label: string;
-  /** Where the knob sits on the scale, in `[min, max]`. */
-  position: number;
-  min?: number;
-  max?: number;
-  /** Keyboard/pointer granularity for a single nudge. */
-  step?: number;
+  /** Current σ, for `aria-valuenow` (0…`sigmaMax`). */
+  sigma: number;
+  /** The largest σ (full scale span), for `aria-valuemax`. */
+  sigmaMax: number;
+  /** Screen position across the track, 0 (left) → 1 (right), already RTL-mirrored. */
+  leftFraction: number;
+  /** How far below the rail the knob hangs, 0 (on the rail) → 1 (σ = max). */
+  drop?: number;
+  /** True when σ has passed the wall and the knob is dropped off the scale. */
+  offScale?: boolean;
   disabled?: boolean;
   /** Called with a signed multiple of `step` when an arrow key is pressed. */
   onNudge?: (delta: number) => void;
+  /** Keyboard granularity for a single nudge. */
+  step?: number;
   /** Forwarded so WaveSlider can start a pointer drag. */
   onPointerDown?: (event: PointerEvent<HTMLDivElement>) => void;
-  /** `rtl` mirrors the knob's horizontal placement. */
-  dir?: "ltr" | "rtl";
 }
 
 export default function IntervalHandle({
   label,
-  position,
-  min = 0,
-  max = 100,
-  step = 1,
+  sigma,
+  sigmaMax,
+  leftFraction,
+  drop = 0,
+  offScale = false,
   disabled = false,
   onNudge,
+  step = 1,
   onPointerDown,
-  dir = "ltr",
 }: IntervalHandleProps) {
-  const ratio = max > min ? (position - min) / (max - min) : 0;
-  const left = dir === "rtl" ? 1 - ratio : ratio;
-
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (disabled) return;
     if (event.key === "ArrowRight" || event.key === "ArrowUp") {
@@ -48,19 +52,22 @@ export default function IntervalHandle({
     }
   }
 
+  const rounded = Math.round(sigma);
   return (
     <div
       role="slider"
       aria-label={label}
-      aria-valuemin={min}
-      aria-valuemax={max}
-      aria-valuenow={Math.round(position)}
+      aria-valuemin={0}
+      aria-valuemax={Math.round(sigmaMax)}
+      aria-valuenow={rounded}
+      aria-valuetext={offScale ? `spread ${rounded}, past the scale edge` : `spread ${rounded}`}
       aria-disabled={disabled || undefined}
       aria-orientation="horizontal"
       tabIndex={disabled ? -1 : 0}
       className="bsg-interval-handle"
       data-disabled={disabled || undefined}
-      style={{ left: `${left * 100}%` }}
+      data-offscale={offScale || undefined}
+      style={{ left: `${leftFraction * 100}%`, "--bsg-handle-drop": drop } as CSSProperties}
       onKeyDown={handleKeyDown}
       onPointerDown={disabled ? undefined : onPointerDown}
     />
