@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bellDensity, bellGeometry, MIN_SIGMA } from "./normal";
+import { bellDensity, bellGeometry, MIN_SIGMA, splitNormalMasses } from "./normal";
 
 describe("bellDensity (split normal)", () => {
   it("peaks at the centre", () => {
@@ -20,6 +20,29 @@ describe("bellDensity (split normal)", () => {
     const d = bellDensity(50 + MIN_SIGMA, 50, 0, 0);
     expect(Number.isFinite(d)).toBe(true);
     expect(d).toBeCloseTo(Math.exp(-0.5), 6); // exactly one floored-sigma away
+  });
+});
+
+describe("splitNormalMasses (matches the backend split_normal_histogram)", () => {
+  it("returns `buckets` masses that sum to 1", () => {
+    const m = splitNormalMasses(50, 12, 12, 20);
+    expect(m).toHaveLength(20);
+    expect(m.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 6);
+    expect(Math.min(...m)).toBeGreaterThanOrEqual(0);
+  });
+
+  it("peaks in the bucket containing the centre and is symmetric for equal widths", () => {
+    const m = splitNormalMasses(50, 12, 12, 20); // centre 50 straddles buckets 9 & 10
+    const peak = Math.max(...m);
+    expect(m[9]).toBeCloseTo(peak, 6);
+    expect(m[10]).toBeCloseTo(peak, 6);
+    expect(m[9]).toBeCloseTo(m[10], 6); // symmetric
+  });
+
+  it("leans on the wall when the guess is pushed to an extreme (mass folds inward)", () => {
+    const m = splitNormalMasses(2, 10, 10, 20);
+    expect(m[0]).toBe(Math.max(...m)); // heaviest bucket is against the low wall
+    expect(m.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 6);
   });
 });
 

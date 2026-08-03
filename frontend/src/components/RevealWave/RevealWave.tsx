@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 
 import type { AiEstimate, RevealPayload } from "../../api/reveal";
 import ScorePanel from "../ScorePanel";
-import { bellGeometry } from "../WaveSlider/normal";
+import { splitNormalMasses } from "../WaveSlider/normal";
 import { beatMargin, classifyOutcome, pickQuip } from "./reveal-outcome";
 import { histogramCurve } from "./curves";
 import type { GuessValue } from "../WaveSlider";
@@ -70,11 +70,18 @@ function HistogramChart({
   const max = Math.max(...histogram, 1e-9);
   const lower = clamp(guess.center - guess.widthLeft, 0, 100);
   const upper = clamp(guess.center + guess.widthRight, 0, 100);
-  // The player's guess bell (teal), peak-normalized so its shape reads clearly.
-  const bell = bellGeometry(guess, 0, 100, CHART_VW, CHART_VH);
-  // The crowd's summed beliefs (orange), on the same vertical scale as the bars.
+  // The player's guess as its truncated split-normal *bucket masses* (sum→1) —
+  // the same quantity, buckets and normalization as the crowd's belief histogram,
+  // so the two curves coincide when the guess matches (what belief_match scores).
+  // Peak-normalizing the bell instead (its own separate scale) is why they used
+  // to sit apart even for an accurate, bell-shaped guess.
+  const guessMasses = splitNormalMasses(guess.center, guess.widthLeft, guess.widthRight, histogram.length);
+  // Both smooth curves share one vertical scale so equal masses draw at equal
+  // heights; the taller of belief/guess just reaches the top.
+  const curveMax = Math.max(...(belief ?? []), ...guessMasses, 1e-9);
+  const guessCurve = histogramCurve(guessMasses, CHART_VW, CHART_VH, curveMax);
   const beliefCurve =
-    belief && belief.length ? histogramCurve(belief, CHART_VW, CHART_VH, max) : null;
+    belief && belief.length ? histogramCurve(belief, CHART_VW, CHART_VH, curveMax) : null;
   return (
     <div className="bsg-reveal-chart" role="img" aria-label={label}>
       <div className="bsg-reveal-bars">
@@ -105,8 +112,8 @@ function HistogramChart({
             <path className="bsg-reveal-belief-line" d={beliefCurve.line} />
           </>
         ) : null}
-        <path className="bsg-reveal-guess-fill" d={bell.area} />
-        <path className="bsg-reveal-guess-line" d={bell.line} />
+        <path className="bsg-reveal-guess-fill" d={guessCurve.area} />
+        <path className="bsg-reveal-guess-line" d={guessCurve.line} />
       </svg>
       {aiMedian !== undefined ? (
         <div className="bsg-reveal-ai-marker" style={{ left: `${aiMedian}%` }} aria-hidden="true" />

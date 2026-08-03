@@ -29,6 +29,62 @@ export function bellDensity(
   return Math.exp(-0.5 * z * z);
 }
 
+/** Floor on σ for the *mass* discretization — matches the backend scorer's
+ * `_MIN_SIGMA`, so the reveal curve equals the shape the guess is scored on. */
+const MASS_MIN_SIGMA = 1;
+
+/** erf via Abramowitz & Stegun 7.1.26 (|error| < 1.5e-7). */
+function erf(x: number): number {
+  const sign = x < 0 ? -1 : 1;
+  const ax = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * ax);
+  const y =
+    1 -
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) *
+      t *
+      Math.exp(-ax * ax);
+  return sign * y;
+}
+
+const normalCdf = (x: number, mu: number, sigma: number) =>
+  0.5 * (1 + erf((x - mu) / (sigma * Math.SQRT2)));
+
+/**
+ * Discretize a guess's truncated split-normal into `buckets` probability masses
+ * summing to 1 — the exact port of the backend's `split_normal_histogram`. The
+ * reveal draws this (not the peak-normalized {@link bellGeometry}) so the
+ * player's curve and the crowd's normalized belief histogram share one vertical
+ * scale and coincide when the guess matches the crowd — the very thing
+ * `belief_match` scores.
+ */
+export function splitNormalMasses(
+  center: number,
+  widthLeft: number,
+  widthRight: number,
+  buckets = 20,
+  scaleMax = 100,
+): number[] {
+  const mode = Math.min(Math.max(center, 0), scaleMax);
+  const sl = Math.max(widthLeft, MASS_MIN_SIGMA);
+  const sr = Math.max(widthRight, MASS_MIN_SIGMA);
+  const zLeft = sl * (0.5 - normalCdf(0, mode, sl));
+  const zRight = sr * (normalCdf(scaleMax, mode, sr) - 0.5);
+  const z = zLeft + zRight;
+  const cdf = (x: number): number => {
+    if (x <= 0) return 0;
+    if (x >= scaleMax) return 1;
+    if (z <= 0) return x < mode ? 0 : 1; // degenerate: point mass at the mode
+    const g =
+      x <= mode
+        ? sl * (normalCdf(x, mode, sl) - normalCdf(0, mode, sl))
+        : zLeft + sr * (normalCdf(x, mode, sr) - 0.5);
+    return Math.min(1, Math.max(0, g / z));
+  };
+  const bucketW = scaleMax / buckets;
+  const edges = Array.from({ length: buckets + 1 }, (_, i) => cdf(i * bucketW));
+  return Array.from({ length: buckets }, (_, i) => edges[i + 1] - edges[i]);
+}
+
 export interface BellGeometry {
   /** SVG path `d` for the filled area under the bell (baseline at `height`). */
   area: string;

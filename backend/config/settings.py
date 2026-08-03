@@ -192,6 +192,9 @@ CONTENT_SUGGEST_LEVEL = int(os.environ.get("CONTENT_SUGGEST_LEVEL", "10"))
 # Level gates for the contribution features (plan §2.x). The dev/e2e stacks
 # lower these so the flows are reachable without grinding to the real levels.
 DAILY_WAVE_LEVEL = int(os.environ.get("CONTENT_DAILY_WAVE_LEVEL", "3"))
+# Days a pairing rests before it can headline another Daily Wave, so the same
+# question never lands on consecutive days (players remember them).
+DAILY_WAVE_COOLDOWN_DAYS = int(os.environ.get("DAILY_WAVE_COOLDOWN_DAYS", "30"))
 CONTENT_VOTE_LEVEL = int(os.environ.get("CONTENT_VOTE_LEVEL", "5"))
 CONTENT_CHALLENGE_LEVEL = int(os.environ.get("CONTENT_CHALLENGE_LEVEL", "10"))
 CONTENT_SCALE_LEVEL = int(os.environ.get("CONTENT_SCALE_LEVEL", "15"))

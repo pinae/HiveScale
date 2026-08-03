@@ -27,8 +27,11 @@ const NO_UNLOCKS: Unlocks = { daily_wave: false, vote: false, challenge: false, 
 /** Levels that unlock a new capability and get an explainer card. */
 export const MILESTONE_LEVELS = [2, 3, 5, 10, 15];
 
-/** How many recently-dealt pairings the client remembers to avoid quick repeats. */
-export const SEEN_WINDOW = 50;
+/** How many recently-dealt pairings the client remembers to avoid quick repeats.
+ * Deliberately long: repeats within a session are more annoying than the extra
+ * pioneer rounds a deep exclusion trades for (must stay ≤ the backend's
+ * MAX_EXCLUDE_IDS or the tail is dropped). */
+export const SEEN_WINDOW = 150;
 
 /** Running player progression surfaced in the header (xp/level/multiplier). */
 export interface ProfileState {

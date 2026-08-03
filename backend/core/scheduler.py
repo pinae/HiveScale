@@ -20,11 +20,12 @@ Design rules:
   same deal regardless of database row order.
 - If the chosen bucket has no candidates, the scheduler falls back through the
   remaining buckets rather than failing.
-- No repeats within the last ``SESSION_WINDOW`` *answered* pairings, plus any
-  ids the client passes in ``exclude_pairing_ids`` (the frontend sends the last
-  ~50 dealt, so the backend needn't track per-player history). If that excludes
-  everything (tiny databases), the window is relaxed rather than erroring — a
-  repeat beats a dead end.
+- No repeats within the last ``SESSION_WINDOW`` *answered* pairings (Daily Wave
+  answers included — they're ordinary guesses), plus any ids the client passes in
+  ``exclude_pairing_ids`` (the frontend sends its recently-dealt window, so the
+  backend needn't track per-player history). If that excludes everything (tiny
+  databases), the window is relaxed rather than erroring — a repeat beats a dead
+  end.
 - ``serialize_deal`` is the *only* shape a deal leaves the backend in, and it
   is blind by construction: no distribution data, and no field that would let
   a client distinguish a fresh pairing from a graduated one (plan §1.7).
@@ -35,8 +36,12 @@ from typing import Protocol
 
 from core.models import ContentStatus, Pairing, Player
 
-#: How many of the player's most recent answered pairings are off-limits.
-SESSION_WINDOW = 25
+#: How many of the player's most recent answered pairings are off-limits. Long by
+#: design: seeing the same question again within ~150 rounds (across sessions, and
+#: including Daily Wave answers, which are ordinary guesses) is far less fun than
+#: the extra pioneer rounds a deep window trades for. The grace fallback keeps a
+#: small pool from dead-ending.
+SESSION_WINDOW = 150
 
 #: Category weights in fall-back order (most to least preferred substitute).
 CATEGORY_WEIGHTS: tuple[tuple[str, float], ...] = (

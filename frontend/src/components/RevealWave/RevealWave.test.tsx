@@ -10,6 +10,7 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import RevealWave from "./RevealWave";
+import { splitNormalMasses } from "../WaveSlider/normal";
 import type { HumanReveal, PioneerReveal } from "../../api/reveal";
 
 const crowdHistogram = Array.from({ length: 20 }, (_, i) => (i >= 8 && i <= 12 ? 0.2 : 0));
@@ -62,6 +63,22 @@ describe("RevealWave (human)", () => {
     const overlay = container.querySelector('[data-testid="reveal-overlay"]')!;
     expect(overlay.querySelector(".bsg-reveal-guess-line")).toBeTruthy(); // teal guess bell
     expect(overlay.querySelector(".bsg-reveal-belief-line")).toBeTruthy(); // orange belief curve
+  });
+
+  it("draws the guess curve exactly on the belief curve when the guess matches the crowd", () => {
+    // A guess whose own split-normal masses ARE the crowd belief must overlap it:
+    // same quantity (bucket masses), same buckets, same vertical scale. This is
+    // the fix — a peak-normalized bell rode its own scale and never coincided.
+    const matched = { center: 50, widthLeft: 14, widthRight: 14 };
+    const belief = splitNormalMasses(matched.center, matched.widthLeft, matched.widthRight, 20);
+    const reveal: HumanReveal = {
+      ...humanReveal,
+      crowd: { ...humanReveal.crowd, histogram: belief, belief_histogram: belief },
+    };
+    const { container } = render(<RevealWave reveal={reveal} guess={matched} animate={false} />);
+    const guessLine = container.querySelector(".bsg-reveal-guess-line")!.getAttribute("d");
+    const beliefLine = container.querySelector(".bsg-reveal-belief-line")!.getAttribute("d");
+    expect(guessLine).toBe(beliefLine);
   });
 
   it("omits the belief curve when the crowd has none yet", () => {

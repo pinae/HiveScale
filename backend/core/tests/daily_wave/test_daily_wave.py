@@ -31,6 +31,23 @@ def test_generation_is_deterministic_and_idempotent():
     assert DailyWave.objects.filter(date=DAY).count() == 1  # not duplicated
 
 
+def test_consecutive_waves_do_not_repeat_pairings():
+    # A pool comfortably larger than two waves: yesterday's pairings must all rest.
+    _make_pairings(40)
+    yesterday = generate_daily_wave(DAY - datetime.timedelta(days=1), size=10)
+    today = generate_daily_wave(DAY, size=10)
+    assert set(today.pairing_ids).isdisjoint(yesterday.pairing_ids)
+
+
+def test_cooldown_relaxes_when_the_pool_is_too_small():
+    # Only 12 pairings but two 10-slot waves need 20 distinct — repeats are allowed
+    # rather than shrinking the wave.
+    _make_pairings(12)
+    generate_daily_wave(DAY - datetime.timedelta(days=1), size=10)
+    today = generate_daily_wave(DAY, size=10)
+    assert len(today.pairing_ids) == 10
+
+
 def test_only_active_pairings_are_chosen():
     active = _make_pairings(12)
     active_ids = {p.id for p in active}

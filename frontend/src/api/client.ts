@@ -217,7 +217,7 @@ export async function submitVote(input: {
 
 /**
  * Deal the next round. `exclude` is the client's recently-seen pairing ids
- * (the last ~50, tracked in memory) so the backend can skip them without
+ * (the last SEEN_WINDOW, tracked in memory) so the backend can skip them without
  * storing per-player history — see the round scheduler.
  */
 export async function fetchNextRound(opts: { exclude?: number[] } = {}): Promise<Round> {
