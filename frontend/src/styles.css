@@ -114,6 +114,8 @@ body {
    track width (preserveAspectRatio: none), so its x maps 1:1 to the scale. */
 .bsg-slider-curve {
   display: block;
+  position: relative;
+  z-index: 1; /* the bell paints above the σ guides that run up behind it */
   width: 100%;
   height: 92px;
   overflow: visible;
@@ -135,6 +137,7 @@ body {
 }
 
 .bsg-slider-bell-guide {
+  fill: none;
   stroke: color-mix(in srgb, var(--bsg-wave) 55%, transparent);
   stroke-width: 1;
   stroke-dasharray: 3 3;
