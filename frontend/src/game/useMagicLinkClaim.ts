@@ -2,11 +2,15 @@
  * Magic-link claim on load (WP-11/§2.6). If the page was opened from a claim
  * link (`?claim=<token>`), confirm it once on mount, hand the (possibly merged)
  * profile to `onConfirmed`, and strip the token from the URL so a refresh can't
- * replay an already-spent link. Returns a human notice to surface, or null.
+ * replay an already-spent link. Returns a human notice to surface, or null; the
+ * notice auto-dismisses after a few seconds so it doesn't linger over the game.
  */
 import { useEffect, useRef, useState } from "react";
 
 import { type ClaimConfirmResult, confirmClaim } from "../api/client";
+
+/** How long the confirmation toast stays up before it clears itself. */
+export const CLAIM_NOTICE_MS = 6000;
 
 export function useMagicLinkClaim(
   onConfirmed: (result: ClaimConfirmResult) => void,
@@ -16,6 +20,14 @@ export function useMagicLinkClaim(
   useEffect(() => {
     onConfirmedRef.current = onConfirmed;
   });
+
+  // Auto-dismiss the toast so it doesn't sit over the game forever (it never
+  // cleared before, so it stayed through every subsequent round).
+  useEffect(() => {
+    if (notice === null) return;
+    const timer = setTimeout(() => setNotice(null), CLAIM_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
