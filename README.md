@@ -552,6 +552,15 @@ terminates TLS; the app containers speak plain HTTP.
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_RATE_LIMIT`, `GEMINI_BACKFILL_LIMIT` | AI cold-start (see above). |
 | `XP_MEANS_WEIGHT`, `XP_BELIEF_WEIGHT`, `ROUND_MAX_POINTS`, `GOOD_MATCH_THRESHOLD` | Scoring/XP balance. |
 | `CONTENT_DAILY_WAVE_LEVEL`, `CONTENT_VOTE_LEVEL`, `CONTENT_CHALLENGE_LEVEL`, `CONTENT_SCALE_LEVEL` | Level gates for the meta features. |
+| `CLAIM_LINK_DELIVERY` | `echo` (dev/test; token in the response) or `email` (send the magic link via SMTP). |
+| `PUBLIC_BASE_URL` | Public app URL used to build the `?claim=<token>` link in claim emails. |
+| `EMAIL_SECURITY`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | Outgoing SMTP. `EMAIL_SECURITY` is `starttls` (587) / `ssl` (465) / `none`; `EMAIL_HOST_USER` is the login name, not the address. |
+
+Email works with any SMTP server and auth method. The RUB stack, for example, uses
+STARTTLS + password auth: `CLAIM_LINK_DELIVERY=email EMAIL_SECURITY=starttls
+EMAIL_HOST=mail.ruhr-uni-bochum.de EMAIL_PORT=587 EMAIL_HOST_USER=hivesx98`, with the
+password and `DEFAULT_FROM_EMAIL` from the secret store. When no `EMAIL_HOST` is set the
+backend falls back to Django's console backend, so dev never opens a socket.
 
 Secrets belong in your secret store (e.g. an Ansible vault via a `service_cfg` map), never
 in a checked-in compose template.

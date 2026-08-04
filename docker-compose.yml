@@ -39,6 +39,19 @@ services:
       CONTENT_CHALLENGE_LEVEL: ${CONTENT_CHALLENGE_LEVEL:-3}
       CONTENT_SCALE_LEVEL: ${CONTENT_SCALE_LEVEL:-4}
       CONTENT_SCALE_MIN_ROUNDS: ${CONTENT_SCALE_MIN_ROUNDS:-2}
+      # Email / SMTP for account-claim magic links. Injected from Ansible in
+      # production; defaults here keep dev on echo delivery (token in the API
+      # response, no mail sent). To go live set CLAIM_LINK_DELIVERY=email and the
+      # EMAIL_* / PUBLIC_BASE_URL vars. RUB: STARTTLS + password auth,
+      # EMAIL_HOST=mail.ruhr-uni-bochum.de EMAIL_PORT=587 EMAIL_HOST_USER=hivesx98.
+      CLAIM_LINK_DELIVERY: ${CLAIM_LINK_DELIVERY:-echo}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:5173}
+      EMAIL_SECURITY: ${EMAIL_SECURITY:-starttls}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-HiveScale <noreply@localhost>}
     ports:
       - "8000:8000"
     volumes:

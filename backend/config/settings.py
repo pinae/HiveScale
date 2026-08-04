@@ -205,6 +205,45 @@ CONTENT_SCALE_MIN_ROUNDS = int(os.environ.get("CONTENT_SCALE_MIN_ROUNDS", "5"))
 # Production is 15; the dev stack lowers it so the crowd histogram appears fast.
 GRADUATION_MIN_ANSWERS = int(os.environ.get("GRADUATION_MIN_ANSWERS", "15"))
 
-# Account-claim magic-link delivery: "echo" returns the token in the API
-# response (dev/test); WP-11 adds real email delivery.
+# Account-claim magic-link delivery:
+#   "echo"  — return the token in the API response (dev/test default); no mail.
+#   "email" — send the magic link through the SMTP settings below.
 CLAIM_LINK_DELIVERY = os.environ.get("CLAIM_LINK_DELIVERY", "echo")
+
+# Absolute, public base URL of the player-facing app, used to build the magic
+# link in claim emails (the SPA reads `?claim=<token>` on load). No trailing slash.
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:5173").rstrip("/")
+
+# --- Email / SMTP ------------------------------------------------------------
+# Outgoing mail (currently the account-claim magic link) goes through here.
+# Everything is environment-driven so any SMTP server and auth method works; the
+# production stack (injected from Ansible into docker-compose) uses STARTTLS +
+# password auth on mail.ruhr-uni-bochum.de:587 with a login name (not the address).
+#
+# EMAIL_SECURITY selects the transport security:
+#   "starttls" — connect plaintext then upgrade to TLS (port 587); RUB's method.
+#   "ssl"      — implicit TLS from the first byte (port 465).
+#   "none"     — no encryption (a local relay / MailHog only).
+# Username + password enable "normal password" (LOGIN/PLAIN) auth; leave them
+# empty for an unauthenticated relay.
+EMAIL_SECURITY = os.environ.get("EMAIL_SECURITY", "starttls").strip().lower()
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")  # login name, not necessarily the address
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = EMAIL_SECURITY == "starttls"  # mutually exclusive with USE_SSL
+EMAIL_USE_SSL = EMAIL_SECURITY == "ssl"
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "15"))
+
+# The From: header on outgoing mail, e.g. "HiveScale <hivescale@ruhr-uni-bochum.de>".
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "HiveScale <noreply@localhost>")
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Real SMTP when a host is configured, otherwise print mail to the console so
+# dev/CI never open a socket. An explicit EMAIL_BACKEND always wins.
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend"
+    if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend",
+)

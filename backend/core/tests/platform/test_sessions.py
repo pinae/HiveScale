@@ -10,8 +10,11 @@ Executable spec (docs/hivescale-plan.md, WP-04):
   anonymous token
 """
 
+from unittest import mock
+
 import pytest
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -128,6 +131,45 @@ def test_claim_confirm_rejects_garbage_tokens() -> None:
     _start_session(client)
     response = client.post(CLAIM_CONFIRM_URL, {"claim_token": "junk"})
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@override_settings(
+    CLAIM_LINK_DELIVERY="email",
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    PUBLIC_BASE_URL="https://play.example",
+    DEFAULT_FROM_EMAIL="HiveScale <noreply@play.example>",
+)
+def test_email_delivery_sends_a_magic_link_and_withholds_the_token() -> None:
+    from django.core import mail
+
+    client = APIClient()
+    _start_session(client)
+    response = client.post(CLAIM_REQUEST_URL, {"email": "wave@example.com"})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert "claim_token" not in response.json()  # the token must not leak in email mode
+    assert len(mail.outbox) == 1
+    message = mail.outbox[0]
+    assert message.to == ["wave@example.com"]
+    assert message.from_email == "HiveScale <noreply@play.example>"
+    # The body carries a usable magic link that the SPA can confirm.
+    assert "https://play.example/?claim=" in message.body
+    token = message.body.split("?claim=")[1].split()[0]
+    confirmed = client.post(CLAIM_CONFIRM_URL, {"claim_token": token})
+    assert confirmed.status_code == status.HTTP_200_OK
+    assert confirmed.json()["player"]["is_claimed"] is True
+
+
+@override_settings(CLAIM_LINK_DELIVERY="email")
+def test_email_delivery_failure_reports_502_without_leaking_the_token() -> None:
+    # A backend that always raises stands in for an unreachable SMTP server.
+    with override_settings(EMAIL_BACKEND="django.core.mail.backends.dummy.EmailBackend"):
+        client = APIClient()
+        _start_session(client)
+        with mock.patch("core.views.send_claim_link", side_effect=OSError("smtp down")):
+            response = client.post(CLAIM_REQUEST_URL, {"email": "wave@example.com"})
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+    assert "claim_token" not in response.json()
 
 
 def test_first_claim_links_a_user_and_rotates_the_token() -> None:

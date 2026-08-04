@@ -1,5 +1,7 @@
 """API views: health (WP-01), sessions & claiming (WP-04)."""
 
+import logging
+
 from django.conf import settings
 from django.core import signing
 from django.core.exceptions import ValidationError
@@ -10,9 +12,12 @@ from rest_framework.response import Response
 
 from core import leveling, voting
 from core.archetypes import calibration_summary, classify
+from core.emails import send_claim_link
 from core.models import Player
 from core.services import claim_player
 from core.sessions import attach_session_cookie, new_device_token, resolve_player
+
+logger = logging.getLogger(__name__)
 
 _CLAIM_SALT = "hivescale.claim"
 _CLAIM_MAX_AGE = 60 * 30  # magic links are valid for 30 minutes
@@ -85,8 +90,9 @@ def me_stats(request) -> Response:
 def claim_request(request) -> Response:
     """Start an account claim: issue a signed magic-link token for an email.
 
-    Delivery is a stub (WP-04): in ``echo`` mode (dev/test default) the token
-    is returned in the response; WP-11 replaces this with an actual email.
+    Delivery follows ``settings.CLAIM_LINK_DELIVERY``: ``echo`` (dev/test
+    default) returns the token in the response; ``email`` sends it as a magic
+    link through the configured SMTP server.
     """
     if resolve_player(request) is None:
         return _unauthorized()
@@ -100,6 +106,15 @@ def claim_request(request) -> Response:
     body = {"detail": "Claim link issued."}
     if settings.CLAIM_LINK_DELIVERY == "echo":
         body["claim_token"] = token
+    else:
+        try:
+            send_claim_link(email, token)
+        except Exception:  # noqa: BLE001 — any SMTP/connection failure: don't leak the token
+            logger.exception("Failed to send claim link to %s", email)
+            return Response(
+                {"detail": "Couldn't send the save link right now. Please try again shortly."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
     return Response(body)
 
 
