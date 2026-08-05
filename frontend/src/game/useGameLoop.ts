@@ -18,6 +18,7 @@ import {
 } from "../api/client";
 import type { LevelProgress, RevealPayload, Unlocks } from "../api/reveal";
 import type { GuessValue } from "../components/WaveSlider";
+import { composeMissReason } from "./missReason";
 
 export type Phase = "booting" | "guessing" | "submitting" | "revealing" | "advancing" | "error";
 
@@ -33,6 +34,11 @@ export const MILESTONE_LEVELS = [2, 3, 5, 10, 15];
  * pioneer rounds a deep exclusion trades for (must stay ≤ the backend's
  * MAX_EXCLUDE_IDS or the tail is dropped). */
 export const SEEN_WINDOW = 150;
+
+/** After this long on one open round the backend's round token expires, so the
+ * player has stepped away — prompt them to start fresh. Matches the server's
+ * ROUND_TOKEN_MAX_AGE (10 min). */
+export const ROUND_STALE_MS = 10 * 60 * 1000;
 
 /** Running player progression surfaced in the header (xp/level/multiplier). */
 export interface ProfileState {
@@ -57,6 +63,26 @@ const profileFrom = (
   unlocks,
 });
 
+/** A player-facing reason the run broke, or null if this round didn't break it.
+ * A round only breaks the run when it's a counted, non-bimodal human round that
+ * missed the good-match bar *and* there was a streak/multiplier to lose. */
+function missReasonFor(
+  rev: RevealPayload,
+  before: { streak: number; multiplier: number },
+): string | null {
+  if (rev.source !== "human" || !rev.counted || rev.score.good_match || rev.bimodal) return null;
+  const streakLost = before.streak > 0 && rev.streak.hot === 0;
+  const multiplierLost = before.multiplier > 1 && (rev.player.multiplier ?? 1) === 1;
+  if (!streakLost && !multiplierLost) return null;
+  return composeMissReason({
+    meansMatch: rev.score.means_match,
+    beliefMatch: rev.score.belief_match,
+    threshold: rev.score.good_match_threshold ?? 0.7,
+    streakLost,
+    multiplierLost,
+  });
+}
+
 export interface GameLoop {
   phase: Phase;
   round: Round | null;
@@ -73,8 +99,14 @@ export interface GameLoop {
   error: string | null;
   /** A transient, non-blocking toast (e.g. a timed-out round was re-dealt). */
   notice: string | null;
+  /** True once the open round has gone stale (player stepped away ~10 min). */
+  roundExpired: boolean;
+  /** Explains why the streak/multiplier just broke, or null. */
+  missReason: string | null;
   submit: () => void;
   next: () => void;
+  /** Deal a fresh round after the open one expired (the "still there?" prompt). */
+  startFreshRound: () => void;
   retry: () => void;
   /** Fold in the profile returned by a successful account claim (WP-11/12). */
   markClaimed: (profile: Profile) => void;
@@ -107,6 +139,11 @@ export function useGameLoop(): GameLoop {
   // A transient, non-blocking toast (e.g. "that round timed out, here's a fresh
   // one") — unlike `error`, it doesn't drop the loop into the error phase.
   const [notice, setNotice] = useState<string | null>(null);
+  // The open round has been sitting long enough that its token has expired — the
+  // player stepped away. Drives the "still there?" prompt.
+  const [roundExpired, setRoundExpired] = useState(false);
+  // Why the streak/multiplier just broke (filled from the reveal), or null.
+  const [missReason, setMissReason] = useState<string | null>(null);
   const [pendingMilestones, setPendingMilestones] = useState<number[]>([]);
 
   useEffect(() => {
@@ -120,6 +157,11 @@ export function useGameLoop(): GameLoop {
   const preloaded = useRef<Round | null>(null);
   const failedAction = useRef<FailedAction | null>(null);
   const lastLevelRef = useRef(1);
+  // When the current round was dealt, to detect a stepped-away (stale) round.
+  const dealtAtRef = useRef(0);
+  // The streak/multiplier *before* the pending submit resolves, so we can tell
+  // whether this round just broke them (read live, not from a stale closure).
+  const progressionRef = useRef({ streak: 0, multiplier: 1 });
   // Recently-dealt pairing ids, newest first, sent to the backend so it can skip
   // them without tracking per-player history (see fetchNextRound / scheduler).
   const seenRef = useRef<number[]>([]);
@@ -132,6 +174,7 @@ export function useGameLoop(): GameLoop {
   useEffect(() => {
     guessRef.current = guess;
     roundRef.current = round;
+    progressionRef.current = { streak, multiplier: profile.multiplier };
   });
 
   // Apply a profile update, and (only for genuine play events) queue an explainer
@@ -164,6 +207,9 @@ export function useGameLoop(): GameLoop {
       setSubmittedGuess(null);
       setGuess(DEFAULT_GUESS);
       setError(null);
+      setMissReason(null);
+      setRoundExpired(false);
+      dealtAtRef.current = Date.now();
       setPhase("guessing");
     },
     [rememberSeen],
@@ -203,23 +249,31 @@ export function useGameLoop(): GameLoop {
     [applyProfile],
   );
 
-  // The round token (or session) went stale — usually the round sat open past
-  // its lifetime. Re-establish the session and deal a fresh round so the player
-  // can keep playing instead of hitting a "try again" that can never succeed with
-  // the dead token (which previously only a page reload fixed).
-  const recoverStaleRound = useCallback(async () => {
-    setPhase("advancing");
-    setError(null);
-    try {
-      const { player } = await startSession();
-      applyProfile(profileFrom(player), false);
-      setIsClaimed(player.is_claimed);
-      applyRound(await fetchNextRound({ exclude: seenRef.current }));
-      setNotice("That round timed out — here's a fresh one.");
-    } catch {
-      fail("submit", "Couldn't submit your guess.");
-    }
-  }, [applyProfile, applyRound, fail]);
+  // Re-establish the session and deal a fresh round. Used both when the player
+  // steps away and their round token expires (the "still there?" prompt) and, as
+  // a fallback, when a submit is rejected because that token is already dead —
+  // either way the player keeps playing without the old dead-end page reload.
+  const dealFreshRound = useCallback(
+    async (toast: string | null) => {
+      setRoundExpired(false);
+      setPhase("advancing");
+      setError(null);
+      try {
+        const { player } = await startSession();
+        applyProfile(profileFrom(player), false);
+        setIsClaimed(player.is_claimed);
+        applyRound(await fetchNextRound({ exclude: seenRef.current }));
+        if (toast) setNotice(toast);
+      } catch {
+        fail("next", "Couldn't deal a fresh round.");
+      }
+    },
+    [applyProfile, applyRound, fail],
+  );
+
+  const startFreshRound = useCallback(() => {
+    void dealFreshRound(null);
+  }, [dealFreshRound]);
 
   const submit = useCallback(async () => {
     const current = roundRef.current;
@@ -228,6 +282,7 @@ export function useGameLoop(): GameLoop {
     setPhase("submitting");
     setError(null);
     setNotice(null);
+    const before = progressionRef.current;
     try {
       const rev = await submitGuess({
         round_token: current.round_token,
@@ -237,6 +292,7 @@ export function useGameLoop(): GameLoop {
       });
       setReveal(rev);
       setSubmittedGuess(g);
+      setMissReason(missReasonFor(rev, before));
       applyProfile(profileFrom(rev.player, rev.progress ?? null, rev.unlocks ?? NO_UNLOCKS), true);
       setStreak(rev.streak.hot);
       setPhase("revealing");
@@ -254,12 +310,12 @@ export function useGameLoop(): GameLoop {
       // session) — recover by dealing fresh. Anything else (a network blip) is
       // genuinely retryable with the same token.
       if (err instanceof ApiError && (err.status === 400 || err.status === 401)) {
-        await recoverStaleRound();
+        await dealFreshRound("That round timed out — here's a fresh one.");
       } else {
         fail("submit", "Couldn't submit your guess.");
       }
     }
-  }, [applyProfile, fail, recoverStaleRound]);
+  }, [applyProfile, fail, dealFreshRound]);
 
   const next = useCallback(async () => {
     if (preloaded.current) {
@@ -294,6 +350,26 @@ export function useGameLoop(): GameLoop {
     boot();
   }, [boot]);
 
+  // Watch the open round: once it has sat for ROUND_STALE_MS its token is dead,
+  // so the player stepped away — flag it for the "still there?" prompt. A player
+  // returning to the tab is checked on focus/visibility too, since background
+  // timers are throttled and may not have fired yet.
+  useEffect(() => {
+    if (phase !== "guessing") return;
+    const check = () => {
+      if (Date.now() - dealtAtRef.current >= ROUND_STALE_MS) setRoundExpired(true);
+    };
+    const remaining = Math.max(0, ROUND_STALE_MS - (Date.now() - dealtAtRef.current));
+    const timer = window.setTimeout(check, remaining + 250);
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [phase, round]);
+
   return {
     phase,
     round,
@@ -308,8 +384,11 @@ export function useGameLoop(): GameLoop {
     dismissMilestone,
     error,
     notice,
+    roundExpired,
+    missReason,
     submit,
     next,
+    startFreshRound,
     retry,
     markClaimed,
     syncProfile,

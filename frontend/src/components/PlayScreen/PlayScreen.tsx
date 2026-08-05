@@ -202,6 +202,11 @@ export default function PlayScreen({ className }: PlayScreenProps) {
                 Too fast — that one didn&apos;t count!
               </p>
             )}
+            {loop.missReason ? (
+              <p className="bsg-miss-reason" role="status">
+                {loop.missReason}
+              </p>
+            ) : null}
             <button type="button" className="bsg-btn bsg-btn-primary" onClick={loop.next}>
               Next round
             </button>
@@ -229,6 +234,33 @@ export default function PlayScreen({ className }: PlayScreenProps) {
 
       {loop.pendingMilestones.length > 0 ? (
         <LevelUpCard level={loop.pendingMilestones[0]} onDismiss={loop.dismissMilestone} />
+      ) : null}
+
+      {loop.roundExpired ? (
+        <div
+          className="bsg-levelup-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bsg-stale-title"
+        >
+          <div className="bsg-levelup-card">
+            <p className="bsg-levelup-badge">Still there?</p>
+            <h2 className="bsg-levelup-title" id="bsg-stale-title">
+              Welcome back!
+            </h2>
+            <p className="bsg-levelup-line">
+              This round has been open for more than 10 minutes, so it&apos;s expired. Start a
+              fresh one to keep playing — nothing you&apos;ve earned is lost.
+            </p>
+            <button
+              type="button"
+              className="bsg-btn bsg-btn-primary"
+              onClick={loop.startFreshRound}
+            >
+              Start a fresh round
+            </button>
+          </div>
+        </div>
       ) : null}
     </div>
   );

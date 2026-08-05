@@ -23,6 +23,8 @@ export interface ScoreBreakdown {
   belief_match: number;
   /** Whether either component cleared the good-match threshold (keeps the multiplier). */
   good_match: boolean;
+  /** The 0-1 bar a match must clear to keep the streak/multiplier (for the reveal copy). */
+  good_match_threshold?: number;
 }
 
 export interface AiEstimate {

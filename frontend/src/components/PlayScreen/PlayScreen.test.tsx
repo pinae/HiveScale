@@ -2,10 +2,10 @@
  * Game-loop flows (against MSW): a happy round, a pioneer round, the too-fast toast,
  * next-round preloading during the reveal, and error/offline retry.
  */
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import PlayScreen from "./PlayScreen";
 import { server } from "../../test/server";
@@ -179,6 +179,86 @@ describe("PlayScreen", () => {
     expect(await screen.findByRole("heading", { name: "Pineapple pizza" })).toBeInTheDocument();
     expect(screen.getByText(/timed out/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /try again/i })).not.toBeInTheDocument();
+  });
+
+  it("explains why the run broke after a miss, in the player's own numbers", async () => {
+    const crowd = {
+      histogram: Array(20).fill(0.05),
+      belief_histogram: Array(20).fill(0.05),
+      median: 52,
+      q25: 44,
+      q75: 60,
+      n: 30,
+    };
+    let guesses = 0;
+    server.use(
+      sessionOk,
+      http.get("/api/round/next/", () => HttpResponse.json(roundA)),
+      http.post("/api/round/guess/", () => {
+        guesses += 1;
+        const good = guesses === 1;
+        return HttpResponse.json({
+          source: "human",
+          counted: true,
+          score: {
+            total: good ? 812 : 300,
+            means_match: good ? 0.8 : 0.53,
+            belief_match: good ? 0.75 : 0.12,
+            good_match: good,
+            good_match_threshold: 0.7,
+          },
+          crowd,
+          percentile: good ? 76 : 40,
+          bimodal: false,
+          streak: { hot: good ? 3 : 0 },
+          player: { xp: good ? 812 : 1112, level: 2, multiplier: good ? 2 : 1 },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<PlayScreen />);
+
+    // A good round first, to build a streak + multiplier worth losing.
+    await screen.findByRole("heading", { name: "Robotic lawnmower" });
+    await user.click(screen.getByRole("button", { name: /lock it in/i }));
+    await user.click(await screen.findByRole("button", { name: /next round/i }));
+
+    // Then a miss — the reveal names the numbers and the 70% bar.
+    await screen.findByRole("heading", { name: "Robotic lawnmower" });
+    await user.click(screen.getByRole("button", { name: /lock it in/i }));
+    await screen.findByRole("button", { name: /next round/i });
+
+    const reason = document.querySelector(".bsg-miss-reason");
+    expect(reason).not.toBeNull();
+    expect(reason?.textContent).toMatch(/70%/); // the threshold, always shown
+    expect(reason?.textContent).toMatch(/streak|multiplier/i); // what was lost
+  });
+
+  it("prompts to start fresh when the player has been away past the round's life", async () => {
+    server.use(
+      sessionOk,
+      http.get("/api/round/next/", () => HttpResponse.json(roundA)),
+      http.post("/api/round/guess/", () => HttpResponse.json(humanReveal(true))),
+    );
+    const user = userEvent.setup();
+    render(<PlayScreen />);
+    await screen.findByRole("heading", { name: "Robotic lawnmower" });
+
+    // Jump the clock past the 10-minute round life and refocus the tab.
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now + 11 * 60 * 1000);
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/welcome back/i)).toBeInTheDocument();
+
+    // The big friendly button deals a fresh round and dismisses the prompt.
+    await user.click(within(dialog).getByRole("button", { name: /start a fresh round/i }));
+    await screen.findByRole("button", { name: /lock it in/i });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    vi.restoreAllMocks();
   });
 
   it("saves progress: the claim panel requests a link, confirms, and marks the session saved", async () => {

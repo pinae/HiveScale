@@ -398,6 +398,18 @@ body {
 .bsg-score-streak { margin: 0.4rem 0 0; font-weight: 700; color: var(--bsg-accent); }
 .bsg-score-streak-boost { color: var(--bsg-wave); }
 
+/* Why the streak/multiplier broke — a small, friendly aside under the reveal. */
+.bsg-miss-reason {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--bsg-radius);
+  background: color-mix(in srgb, var(--bsg-danger) 14%, var(--bsg-bg-raised));
+  border: 1px solid color-mix(in srgb, var(--bsg-danger) 35%, transparent);
+  color: var(--bsg-ink);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .bsg-reveal-beatbot {
   margin: 0;
   text-align: center;

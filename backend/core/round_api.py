@@ -49,12 +49,11 @@ from core.tasks import schedule_cold_start
 #: labor (plan §2.5).
 PIONEER_BONUS = 550
 
-#: A dealt round stays answerable for this long. Generous on purpose: a player
-#: who opens a round, gets distracted, and comes back hours later should still be
-#: able to submit rather than hit a dead "try again" (the client also recovers by
-#: re-dealing if the token has truly lapsed). The speed floor only rejects answers
-#: that are too *fast*, so a long think is never penalised.
-ROUND_TOKEN_MAX_AGE = 60 * 60 * 12
+#: A dealt round stays answerable for ten minutes. Players don't deliberate that
+#: long — a stale round means they stepped away — so the client watches for this
+#: same window and, instead of letting a doomed submit through, offers a fresh
+#: round via an "are you still there?" prompt.
+ROUND_TOKEN_MAX_AGE = 60 * 10
 _ROUND_SALT = "hivescale.round"
 
 
@@ -379,6 +378,9 @@ def _human_reveal(player, guess, value, snapshot, percentile, counted) -> dict:
             "means_match": match.means_match,
             "belief_match": match.belief_match,
             "good_match": good_match,
+            # The bar a match must clear to keep the streak/multiplier, so the
+            # reveal can explain a miss in the player's own numbers.
+            "good_match_threshold": settings.GOOD_MATCH_THRESHOLD,
         },
         "crowd": {
             "histogram": list(means_hist),
