@@ -104,3 +104,17 @@ def next_multiplier(
     if good_match:
         return min(MAX_MULTIPLIER, current + 1)
     return 1
+
+
+def next_hot_streak(current: int, *, bimodal: bool, good_match: bool) -> int:
+    """The hot streak — calibrated guesses in a row — after this round resolves.
+
+    Deliberately the *same* good-match rule that moves the multiplier, so the two
+    never disagree: a good match extends it, a poor one breaks it, and a bimodal
+    ("society at war") round is neutral. Pioneer rounds don't call this, so they
+    leave the streak untouched. The streak is the uncapped run; the multiplier is
+    that run turned into an XP reward (capped ×10, and only from level 2).
+    """
+    if bimodal:
+        return current
+    return current + 1 if good_match else 0

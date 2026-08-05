@@ -35,7 +35,7 @@ from core.models import (
     Scale,
     Thing,
 )
-from core.round_api import GOOD_ROUND_THRESHOLD, PIONEER_BONUS, issue_round_token
+from core.round_api import PIONEER_BONUS, issue_round_token
 from core.services import SPEED_FLOOR_MS, recompute_snapshot
 
 pytestmark = pytest.mark.django_db
@@ -187,8 +187,9 @@ def test_round_trip_reveal_payload_on_a_graduated_pairing() -> None:
     assert body["crowd"]["median"] == pytest.approx(snapshot.median)
     assert 0 <= body["percentile"] <= 100
     assert isinstance(body["bimodal"], bool)
-    # The hot streak extends only when the round clears the good-round threshold.
-    assert body["streak"]["hot"] == (1 if body["score"]["total"] >= GOOD_ROUND_THRESHOLD else 0)
+    # The hot streak extends exactly when the round is a good match (the same
+    # rule that moves the multiplier).
+    assert body["streak"]["hot"] == (1 if body["score"]["good_match"] else 0)
 
     player.refresh_from_db()
     assert player.xp == int(round(body["score"]["total"]))
@@ -308,7 +309,7 @@ def test_hot_streak_builds_on_good_rounds_and_resets_on_bad_ones() -> None:
         == 2
     )
     bad = _submit(client, _slow_token(pairing, player), center=2.0, wl=1, wr=1)
-    assert bad.json()["score"]["total"] < GOOD_ROUND_THRESHOLD
+    assert bad.json()["score"]["good_match"] is False
     assert bad.json()["streak"]["hot"] == 0
 
 

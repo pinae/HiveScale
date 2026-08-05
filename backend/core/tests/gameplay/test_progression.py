@@ -91,3 +91,14 @@ def test_bimodal_and_pioneer_rounds_are_neutral():
         leveling.next_multiplier(4, level=5, source="pioneer", bimodal=False, good_match=None)
         == 4
     )
+
+
+# --- Hot streak (same good-match rule as the multiplier) -------------------
+
+
+def test_hot_streak_follows_the_same_good_match_rule_as_the_multiplier():
+    # Grows on a good match, breaks on a poor one, neutral on a bimodal round.
+    assert leveling.next_hot_streak(3, bimodal=False, good_match=True) == 4
+    assert leveling.next_hot_streak(3, bimodal=False, good_match=False) == 0
+    assert leveling.next_hot_streak(3, bimodal=True, good_match=False) == 3  # society at war: held
+    assert leveling.next_hot_streak(3, bimodal=True, good_match=True) == 3

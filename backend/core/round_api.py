@@ -49,11 +49,12 @@ from core.tasks import schedule_cold_start
 #: labor (plan §2.5).
 PIONEER_BONUS = 550
 
-#: Visible total at or above which a round extends the in-session hot streak.
-GOOD_ROUND_THRESHOLD = 500.0
-
-#: A dealt round stays answerable for ten minutes.
-ROUND_TOKEN_MAX_AGE = 60 * 10
+#: A dealt round stays answerable for this long. Generous on purpose: a player
+#: who opens a round, gets distracted, and comes back hours later should still be
+#: able to submit rather than hit a dead "try again" (the client also recovers by
+#: re-dealing if the token has truly lapsed). The speed floor only rejects answers
+#: that are too *fast*, so a long think is never penalised.
+ROUND_TOKEN_MAX_AGE = 60 * 60 * 12
 _ROUND_SALT = "hivescale.round"
 
 
@@ -329,6 +330,7 @@ def _human_reveal(player, guess, value, snapshot, percentile, counted) -> dict:
         max_points=settings.ROUND_MAX_POINTS,
     )
     good_match = max(match.means_match, match.belief_match) >= settings.GOOD_MATCH_THRESHOLD
+    bimodal = detect_bimodality(means_hist).is_bimodal
     hidden_crps = crps(guess_to_distribution(value), means_hist)
 
     RoundScore.objects.create(
@@ -349,9 +351,12 @@ def _human_reveal(player, guess, value, snapshot, percentile, counted) -> dict:
     if counted:
         # XP + level + multiplier are applied centrally in _apply_progression;
         # here we only fold the streak and the running calibration curve (the
-        # calibration record still drives the stats-page archetypes).
-        player.hot_streak = (
-            player.hot_streak + 1 if match.total >= GOOD_ROUND_THRESHOLD else 0
+        # calibration record still drives the stats-page archetypes). The streak
+        # follows the same good-match rule as the multiplier so they never
+        # disagree — both grow on a good match, break on a poor one, and hold on
+        # a bimodal round.
+        player.hot_streak = leveling.next_hot_streak(
+            player.hot_streak, bimodal=bimodal, good_match=good_match
         )
         current = CalibrationStats(
             n=int(player.calibration_stats.get("n", 0)),
@@ -384,7 +389,7 @@ def _human_reveal(player, guess, value, snapshot, percentile, counted) -> dict:
             "n": snapshot.n,
         },
         "percentile": percentile,
-        "bimodal": detect_bimodality(means_hist).is_bimodal,
+        "bimodal": bimodal,
     }
 
 

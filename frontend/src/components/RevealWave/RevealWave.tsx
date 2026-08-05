@@ -178,6 +178,7 @@ function renderHuman(
         quip={pickQuip(outcome, quipSeed)}
         animate={active}
         streakHot={reveal.streak.hot}
+        multiplier={reveal.player.multiplier}
       />
       {aiEstimate ? (
         <p className="bsg-reveal-beatbot" data-win={margin >= 0 || undefined}>

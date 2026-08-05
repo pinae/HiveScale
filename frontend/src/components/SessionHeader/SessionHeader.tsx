@@ -67,16 +67,27 @@ export default function SessionHeader({
             <dt>XP</dt>
             <dd data-testid="session-xp">{xp}</dd>
           </div>
-          {multiplier > 1 ? (
-            <div className="bsg-session-mult" aria-label={`XP multiplier ${multiplier} times`}>
-              <dt aria-hidden="true">Mult</dt>
-              <dd data-testid="session-multiplier">×{multiplier}</dd>
-            </div>
-          ) : null}
+          {/* Two related-but-distinct stats: the streak is *how many* calibrated
+              guesses you've strung together; the multiplier is the *XP reward*
+              that run earns (capped ×10). Titles spell the relationship out. */}
           {streak >= 3 ? (
-            <div className="bsg-session-streak" aria-label={`Hot streak: ${streak}`}>
+            <div
+              className="bsg-session-streak"
+              aria-label={`Hot streak: ${streak}`}
+              title="Calibrated guesses in a row. Keeping it going is what raises your XP boost."
+            >
               <dt aria-hidden="true">Streak</dt>
               <dd>🔥 {streak}</dd>
+            </div>
+          ) : null}
+          {multiplier > 1 ? (
+            <div
+              className="bsg-session-mult"
+              aria-label={`XP multiplier ${multiplier} times`}
+              title={`Your XP is multiplied ×${multiplier} right now. It climbs one step for each calibrated guess in a row (up to ×10) and resets on a miss.`}
+            >
+              <dt aria-hidden="true">XP boost</dt>
+              <dd data-testid="session-multiplier">×{multiplier}</dd>
             </div>
           ) : null}
         </dl>

@@ -396,6 +396,7 @@ body {
 .bsg-score-percentile { margin: 0.75rem 0 0; color: var(--bsg-ink); }
 .bsg-score-percentile strong { color: var(--bsg-accent); }
 .bsg-score-streak { margin: 0.4rem 0 0; font-weight: 700; color: var(--bsg-accent); }
+.bsg-score-streak-boost { color: var(--bsg-wave); }
 
 .bsg-reveal-beatbot {
   margin: 0;

@@ -178,6 +178,11 @@ export default function PlayScreen({ className }: PlayScreenProps) {
             {claimNotice}
           </p>
         ) : null}
+        {loop.notice ? (
+          <p className="bsg-toast" role="status">
+            {loop.notice}
+          </p>
+        ) : null}
         {phase === "error" ? (
           <div className="bsg-play-error" role="alert">
             <p>{loop.error}</p>

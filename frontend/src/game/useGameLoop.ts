@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  ApiError,
   type Profile,
   type Round,
   fetchNextRound,
@@ -70,6 +71,8 @@ export interface GameLoop {
   pendingMilestones: number[];
   dismissMilestone: () => void;
   error: string | null;
+  /** A transient, non-blocking toast (e.g. a timed-out round was re-dealt). */
+  notice: string | null;
   submit: () => void;
   next: () => void;
   retry: () => void;
@@ -101,7 +104,16 @@ export function useGameLoop(): GameLoop {
   const [streak, setStreak] = useState(0);
   const [isClaimed, setIsClaimed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A transient, non-blocking toast (e.g. "that round timed out, here's a fresh
+  // one") — unlike `error`, it doesn't drop the loop into the error phase.
+  const [notice, setNotice] = useState<string | null>(null);
   const [pendingMilestones, setPendingMilestones] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (notice === null) return;
+    const timer = setTimeout(() => setNotice(null), 6000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   const guessRef = useRef(guess);
   const roundRef = useRef<Round | null>(round);
@@ -191,12 +203,31 @@ export function useGameLoop(): GameLoop {
     [applyProfile],
   );
 
+  // The round token (or session) went stale — usually the round sat open past
+  // its lifetime. Re-establish the session and deal a fresh round so the player
+  // can keep playing instead of hitting a "try again" that can never succeed with
+  // the dead token (which previously only a page reload fixed).
+  const recoverStaleRound = useCallback(async () => {
+    setPhase("advancing");
+    setError(null);
+    try {
+      const { player } = await startSession();
+      applyProfile(profileFrom(player), false);
+      setIsClaimed(player.is_claimed);
+      applyRound(await fetchNextRound({ exclude: seenRef.current }));
+      setNotice("That round timed out — here's a fresh one.");
+    } catch {
+      fail("submit", "Couldn't submit your guess.");
+    }
+  }, [applyProfile, applyRound, fail]);
+
   const submit = useCallback(async () => {
     const current = roundRef.current;
     if (!current) return;
     const g = guessRef.current;
     setPhase("submitting");
     setError(null);
+    setNotice(null);
     try {
       const rev = await submitGuess({
         round_token: current.round_token,
@@ -218,10 +249,17 @@ export function useGameLoop(): GameLoop {
         .catch(() => {
           preloaded.current = null;
         });
-    } catch {
-      fail("submit", "Couldn't submit your guess.");
+    } catch (err) {
+      // A 400/401 means this token can never succeed (expired round or lapsed
+      // session) — recover by dealing fresh. Anything else (a network blip) is
+      // genuinely retryable with the same token.
+      if (err instanceof ApiError && (err.status === 400 || err.status === 401)) {
+        await recoverStaleRound();
+      } else {
+        fail("submit", "Couldn't submit your guess.");
+      }
     }
-  }, [applyProfile, fail]);
+  }, [applyProfile, fail, recoverStaleRound]);
 
   const next = useCallback(async () => {
     if (preloaded.current) {
@@ -269,6 +307,7 @@ export function useGameLoop(): GameLoop {
     pendingMilestones,
     dismissMilestone,
     error,
+    notice,
     submit,
     next,
     retry,

@@ -158,6 +158,29 @@ describe("PlayScreen", () => {
     expect(await screen.findByRole("heading", { name: "Robotic lawnmower" })).toBeInTheDocument();
   });
 
+  it("recovers from a timed-out round by dealing a fresh one, not a dead 'try again'", async () => {
+    let dealt = 0;
+    server.use(
+      sessionOk,
+      http.get("/api/round/next/", () => HttpResponse.json(dealt++ === 0 ? roundA : roundB)),
+      // The round sat open too long: the token is expired (400).
+      http.post("/api/round/guess/", () =>
+        HttpResponse.json({ detail: "Invalid or expired round token." }, { status: 400 }),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<PlayScreen />);
+    await screen.findByRole("heading", { name: "Robotic lawnmower" });
+
+    await user.click(screen.getByRole("button", { name: /lock it in/i }));
+
+    // A fresh round is dealt and a non-blocking toast explains why — the player
+    // keeps playing without reloading, and there is no error "try again".
+    expect(await screen.findByRole("heading", { name: "Pineapple pizza" })).toBeInTheDocument();
+    expect(screen.getByText(/timed out/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /try again/i })).not.toBeInTheDocument();
+  });
+
   it("saves progress: the claim panel requests a link, confirms, and marks the session saved", async () => {
     server.use(
       sessionOk,

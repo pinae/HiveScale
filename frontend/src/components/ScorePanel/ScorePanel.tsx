@@ -14,6 +14,8 @@ export interface ScorePanelProps {
   quip: string;
   animate: boolean;
   streakHot?: number;
+  /** Current XP multiplier, shown next to the streak so their link is obvious. */
+  multiplier?: number;
 }
 
 const easeOut = (t: number) => 1 - (1 - t) ** 3;
@@ -46,6 +48,7 @@ export default function ScorePanel({
   quip,
   animate,
   streakHot = 0,
+  multiplier = 1,
 }: ScorePanelProps) {
   const total = useCountUp(Math.round(score.total), animate);
 
@@ -70,7 +73,8 @@ export default function ScorePanel({
       </p>
       {streakHot >= 3 ? (
         <p className="bsg-score-streak" aria-label={`Hot streak: ${streakHot}`}>
-          🔥 {streakHot} in a row
+          🔥 {streakHot} calibrated in a row
+          {multiplier > 1 ? <span className="bsg-score-streak-boost"> · XP boost ×{multiplier}</span> : null}
         </p>
       ) : null}
     </div>
