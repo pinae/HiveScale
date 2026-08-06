@@ -17,6 +17,8 @@ export interface SessionHeaderProps {
   onShowStats?: () => void;
   /** When provided, renders a button that opens the Daily Wave (WP-11). */
   onDailyWave?: () => void;
+  /** When provided (level 4+ unlock), renders the PvP battle entry. */
+  onBattle?: () => void;
   /** When provided (level 5+ unlock), renders the pairing-vote entry. */
   onVote?: () => void;
   /** When provided (level 10+ unlock), renders the thing-challenge entry. */
@@ -37,6 +39,7 @@ export default function SessionHeader({
   progress = null,
   onShowStats,
   onDailyWave,
+  onBattle,
   onVote,
   onChallenge,
   onScaleRequest,
@@ -47,7 +50,9 @@ export default function SessionHeader({
     progress && progress.level_span > 0
       ? Math.max(0, Math.min(100, (progress.into_level / progress.level_span) * 100))
       : 0;
-  const hasActions = Boolean(onDailyWave || onVote || onChallenge || onScaleRequest || onShowStats);
+  const hasActions = Boolean(
+    onDailyWave || onBattle || onVote || onChallenge || onScaleRequest || onShowStats,
+  );
   return (
     <header className="bsg-session-header">
       {/* Top line: brand floats left, the level/xp/multiplier stat trio is
@@ -127,6 +132,11 @@ export default function SessionHeader({
           {onDailyWave ? (
             <button type="button" className="bsg-btn bsg-session-wavebtn" onClick={onDailyWave}>
               🌊 Daily
+            </button>
+          ) : null}
+          {onBattle ? (
+            <button type="button" className="bsg-btn bsg-session-battlebtn" onClick={onBattle}>
+              ⚔️ Battle
             </button>
           ) : null}
           {onVote ? (

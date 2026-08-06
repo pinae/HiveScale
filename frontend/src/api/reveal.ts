@@ -54,6 +54,8 @@ export interface LevelProgress {
 /** Level-gated features the player has unlocked. */
 export interface Unlocks {
   daily_wave: boolean;
+  /** PvP matches — a head-to-head wave against a friend. */
+  multiplayer: boolean;
   vote: boolean;
   challenge: boolean;
   scale: boolean;

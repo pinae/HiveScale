@@ -285,3 +285,100 @@ class DailyWaveEntry(models.Model):
 
     def __str__(self) -> str:
         return f"DailyWaveEntry(wave={self.wave_id}, player={self.player_id}, i={self.index})"
+
+
+class PvpMatch(models.Model):
+    """A head-to-head wave: two players answer the same ordered pairings.
+
+    Only rating-eligible (graduated) pairings are used, so both players are always
+    scored against a real crowd — a pioneer round would have nothing to compare.
+    The ``join_code`` is the opaque secret in the share link; the first player who
+    opens it (other than the challenger) becomes the opponent.
+    """
+
+    challenger = models.ForeignKey(
+        Player, on_delete=models.CASCADE, related_name="pvp_matches_started"
+    )
+    opponent = models.ForeignKey(
+        Player, null=True, blank=True, on_delete=models.CASCADE, related_name="pvp_matches_joined"
+    )
+    join_code = models.CharField(max_length=64, unique=True)
+    pairing_ids = models.JSONField(default=list)
+    invited_email = models.CharField(max_length=254, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return f"PvpMatch {self.join_code} ({self.challenger_id} vs {self.opponent_id})"
+
+    @property
+    def is_full(self) -> bool:
+        return self.opponent_id is not None
+
+    def has_player(self, player) -> bool:
+        return player.pk in {self.challenger_id, self.opponent_id}
+
+    def other_player_id(self, player) -> int | None:
+        return self.opponent_id if player.pk == self.challenger_id else self.challenger_id
+
+
+class PvpRound(models.Model):
+    """The start barrier for one slot of a match.
+
+    A pairing is only revealed once *both* players have marked themselves ready;
+    ``started_at`` is stamped at that moment and every answer's response time is
+    measured from it, so the "who was faster" race is timed from one instant for
+    both players rather than from whenever each happened to open the round.
+    """
+
+    match = models.ForeignKey(PvpMatch, on_delete=models.CASCADE, related_name="rounds")
+    index = models.PositiveIntegerField()
+    challenger_ready_at = models.DateTimeField(null=True, blank=True)
+    opponent_ready_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["index"]
+        constraints = [
+            models.UniqueConstraint(fields=["match", "index"], name="unique_pvp_round_slot"),
+        ]
+
+    def __str__(self) -> str:
+        return f"PvpRound(match={self.match_id}, i={self.index}, started={self.started_at})"
+
+    @property
+    def both_ready(self) -> bool:
+        return self.challenger_ready_at is not None and self.opponent_ready_at is not None
+
+
+class PvpEntry(models.Model):
+    """One player's answer to one slot of a match.
+
+    Keeps the match-relevant score parts denormalised (the two match components,
+    the response time, and whether the speed bonus applied) so the standings, the
+    speed race, and the end-of-match arrow-chain diagram need no re-scoring.
+    """
+
+    match = models.ForeignKey(PvpMatch, on_delete=models.CASCADE, related_name="entries")
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="pvp_entries")
+    index = models.PositiveIntegerField()
+    guess = models.OneToOneField(Guess, on_delete=models.CASCADE, related_name="pvp_entry")
+    visible_points = models.FloatField(help_text="Round score after any speed bonus.")
+    means_match = models.FloatField(default=0.0)
+    belief_match = models.FloatField(default=0.0)
+    response_ms = models.PositiveIntegerField(default=0)
+    speed_bonus = models.BooleanField(
+        default=False, help_text="Whether this round's points were doubled."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["index"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["match", "player", "index"], name="unique_pvp_match_slot"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"PvpEntry(match={self.match_id}, player={self.player_id}, i={self.index})"

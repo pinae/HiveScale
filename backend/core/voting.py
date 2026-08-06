@@ -39,10 +39,12 @@ def unlocks(player) -> dict:
     # Lazy imports keep this module free of a contribution → voting cycle.
     from core.challenges import challenge_level
     from core.daily_wave import daily_wave_level
+    from core.pvp import multiplayer_level
     from core.scale_requests import scale_request_level
 
     return {
         "daily_wave": player.level >= daily_wave_level(),
+        "multiplayer": player.level >= multiplayer_level(),
         "vote": player.level >= vote_level(),
         "challenge": player.level >= challenge_level(),
         "scale": player.level >= scale_request_level(),

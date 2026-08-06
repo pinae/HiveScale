@@ -162,6 +162,25 @@ CELERY_TASK_IGNORE_RESULT = True
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = False
 CELERY_BROKER_TRANSPORT_OPTIONS = {"socket_connect_timeout": 2, "socket_timeout": 2}
 
+# Shared cache. Used by the PvP round barrier (core/pvp.py) as a cheap "both
+# players are ready" signal so the long-poll loop doesn't hammer the database —
+# the DB stays authoritative, this is only an accelerator. Redis when a URL is
+# configured (it is, for Celery); an in-process cache otherwise (dev/CI/tests).
+if os.environ.get("REDIS_URL"):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": os.environ["REDIS_URL"],
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "hivescale-local",
+        }
+    }
+
 # Gemini cold-start worker (WP-07). The key is absent in dev/CI; the worker is
 # always faked in tests and the one real-API test is @external (run manually).
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -192,6 +211,8 @@ CONTENT_SUGGEST_LEVEL = int(os.environ.get("CONTENT_SUGGEST_LEVEL", "10"))
 # Level gates for the contribution features (plan §2.x). The dev/e2e stacks
 # lower these so the flows are reachable without grinding to the real levels.
 DAILY_WAVE_LEVEL = int(os.environ.get("CONTENT_DAILY_WAVE_LEVEL", "3"))
+# Player level that unlocks PvP matches (head-to-head wave against a friend).
+MULTIPLAYER_LEVEL = int(os.environ.get("MULTIPLAYER_LEVEL", "4"))
 # Days a pairing rests before it can headline another Daily Wave, so the same
 # question never lands on consecutive days (players remember them).
 DAILY_WAVE_COOLDOWN_DAYS = int(os.environ.get("DAILY_WAVE_COOLDOWN_DAYS", "30"))

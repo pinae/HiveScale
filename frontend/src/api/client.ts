@@ -242,3 +242,114 @@ export async function submitGuess(input: GuessInput): Promise<RevealPayload> {
     }),
   );
 }
+
+// --- PvP matches (head-to-head wave against a friend) ---------------------
+
+/** One player's answered round within a match — also the diagram's vectors. */
+export interface PvpEntry {
+  index: number;
+  points: number;
+  means_match: number;
+  belief_match: number;
+  response_ms: number;
+  speed_bonus: boolean;
+}
+
+export interface PvpSide {
+  answered: number;
+  score: number;
+  entries: PvpEntry[];
+}
+
+/** The next slot. Blind — thing/scale only appear once both players are ready. */
+export interface PvpNext {
+  index: number;
+  started: boolean;
+  opponent_ready: boolean;
+  pairing_id?: number;
+  thing?: { text: string };
+  scale?: { left: string; right: string };
+  pvp_token?: string;
+}
+
+export interface PvpResultSummary {
+  winner: "you" | "opponent" | "tie";
+  /** How much further the winner's arrow chain reached toward the corner. */
+  margin: number;
+  score_margin: number;
+  you_end: { x: number; y: number };
+  opponent_end: { x: number; y: number };
+}
+
+export interface PvpMatchState {
+  join_code: string;
+  total: number;
+  opponent_joined: boolean;
+  you: PvpSide;
+  opponent: PvpSide;
+  /** Whether the round you're about to play is already doubled. */
+  speed_bonus_next: boolean;
+  next: PvpNext | null;
+  completed: boolean;
+  result: PvpResultSummary | null;
+}
+
+/** A ready-poll either times out (waiting) or hands back the released round. */
+export type PvpReadyResult = ({ waiting: true; index: number } & Partial<PvpMatchState>) |
+  ({ waiting: false; index: number } & PvpMatchState);
+
+/** A PvP guess reveals the round *and* carries the updated match state. */
+export type PvpReveal = RevealPayload & { speed_bonus: boolean; match: PvpMatchState };
+
+export interface PvpCaptcha {
+  captcha_token: string;
+  thing: { text: string };
+  scale: { left: string; right: string };
+}
+
+export interface PvpStartResult {
+  join_code: string;
+  link: string;
+  invited: boolean;
+  detail?: string;
+}
+
+/** Deal the anti-bot round a challenger must play before we'll email a friend. */
+export async function fetchPvpCaptcha(): Promise<PvpCaptcha> {
+  return readJson(await fetch("/api/pvp/captcha/"));
+}
+
+export interface PvpStartInput {
+  mode: "link" | "email";
+  email?: string;
+  captcha_token?: string;
+  center?: number;
+  width_left?: number;
+  width_right?: number;
+  /** Sampled pointer movement `[x, y, t]`, so the backend can tell a hand from a script. */
+  pointer_path?: number[][];
+}
+
+export async function startPvpMatch(input: PvpStartInput): Promise<PvpStartResult> {
+  return readJson(await jsonPost("/api/pvp/start/", input));
+}
+
+/** Read a match — and join it, if this is the first time you've opened the link. */
+export async function fetchPvpMatch(joinCode: string): Promise<PvpMatchState> {
+  return readJson(await fetch(`/api/pvp/${encodeURIComponent(joinCode)}/`));
+}
+
+/** Mark ready for a slot and long-poll until the opponent is ready too. */
+export async function readyForPvpRound(
+  joinCode: string,
+  index: number,
+): Promise<PvpReadyResult> {
+  return readJson(await jsonPost(`/api/pvp/${encodeURIComponent(joinCode)}/ready/`, { index }));
+}
+
+export async function submitPvpGuess(
+  joinCode: string,
+  input: { pvp_token: string; center: number; width_left: number; width_right: number },
+): Promise<PvpReveal> {
+  return readJson(await jsonPost(`/api/pvp/${encodeURIComponent(joinCode)}/guess/`, input));
+}

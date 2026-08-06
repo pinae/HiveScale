@@ -39,6 +39,8 @@ services:
       CONTENT_CHALLENGE_LEVEL: ${CONTENT_CHALLENGE_LEVEL:-3}
       CONTENT_SCALE_LEVEL: ${CONTENT_SCALE_LEVEL:-4}
       CONTENT_SCALE_MIN_ROUNDS: ${CONTENT_SCALE_MIN_ROUNDS:-2}
+      # Dev: unlock PvP battles early too (production default is 4).
+      MULTIPLAYER_LEVEL: ${MULTIPLAYER_LEVEL:-1}
       # Email / SMTP for account-claim magic links. Injected from Ansible in
       # production; defaults here keep dev on echo delivery (token in the API
       # response, no mail sent). To go live set CLAIM_LINK_DELIVERY=email and the

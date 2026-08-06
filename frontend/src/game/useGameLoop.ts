@@ -24,7 +24,13 @@ export type Phase = "booting" | "guessing" | "submitting" | "revealing" | "advan
 
 export const DEFAULT_GUESS: GuessValue = { center: 50, widthLeft: 15, widthRight: 15 };
 
-const NO_UNLOCKS: Unlocks = { daily_wave: false, vote: false, challenge: false, scale: false };
+const NO_UNLOCKS: Unlocks = {
+  daily_wave: false,
+  multiplayer: false,
+  vote: false,
+  challenge: false,
+  scale: false,
+};
 
 /** Levels that unlock a new capability and get an explainer card. */
 export const MILESTONE_LEVELS = [2, 3, 5, 10, 15];

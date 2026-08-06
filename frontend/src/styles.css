@@ -787,3 +787,101 @@ body {
 
 .bsg-stats-empty,
 .bsg-stats-count { margin: 0; text-align: center; color: var(--bsg-ink-dim); font-size: 0.85rem; }
+
+/* --- PvP matches (head-to-head battles) --------------------------------- */
+
+.bsg-session-battlebtn { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+
+/* The invite modal: two clearly separated options, each with its own blurb. */
+.bsg-pvp-invite { max-width: 460px; max-height: 88vh; overflow-y: auto; text-align: left; }
+.bsg-pvp-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border-radius: var(--bsg-radius);
+  background: color-mix(in srgb, var(--bsg-wave-deep) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bsg-wave) 22%, transparent);
+}
+.bsg-pvp-option form { display: flex; flex-direction: column; gap: 0.6rem; }
+.bsg-pvp-option-title { margin: 0; font-size: 0.95rem; }
+.bsg-pvp-option-hint { margin: 0; color: var(--bsg-ink-dim); font-size: 0.82rem; line-height: 1.45; }
+.bsg-pvp-linkrow { display: flex; gap: 0.4rem; }
+.bsg-pvp-linkfield {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--bsg-radius);
+  border: 1px solid color-mix(in srgb, var(--bsg-wave) 40%, transparent);
+  background: var(--bsg-bg);
+  color: var(--bsg-ink);
+}
+.bsg-pvp-captcha { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* Waiting at the round barrier — both players start together. */
+.bsg-pvp-waiting { display: flex; flex-direction: column; gap: 0.5rem; text-align: center; }
+
+.bsg-pvp-bonus {
+  margin: 0;
+  text-align: center;
+  font-weight: 800;
+  color: var(--bsg-accent);
+}
+.bsg-pvp-standing { margin: 0; text-align: center; color: var(--bsg-ink); font-weight: 700; }
+
+/* The result: winner, scores, and the arrow-chain diagram. */
+.bsg-pvp-result { display: flex; flex-direction: column; gap: 0.9rem; align-items: center; }
+.bsg-pvp-result-title { margin: 0; text-align: center; font-size: clamp(1.4rem, 6vw, 2rem); }
+.bsg-pvp-result-title[data-winner="you"] { color: var(--bsg-wave); }
+.bsg-pvp-result-title[data-winner="opponent"] { color: var(--bsg-accent); }
+.bsg-pvp-result-margin { margin: 0; text-align: center; color: var(--bsg-ink-dim); font-size: 0.9rem; }
+.bsg-pvp-result-scores { display: flex; gap: 2rem; margin: 0; }
+.bsg-pvp-result-scores div { display: flex; flex-direction: column; align-items: center; }
+.bsg-pvp-result-scores dt { color: var(--bsg-ink-dim); font-size: 0.7rem; text-transform: uppercase; }
+.bsg-pvp-result-scores dd { margin: 0; font-weight: 800; font-size: 1.4rem; }
+
+.bsg-pvp-figure { margin: 0; width: 100%; max-width: 340px; }
+.bsg-pvp-diagram { display: block; width: 100%; height: auto; overflow: visible; }
+/* Axes and labels in the game's turquoise. */
+.bsg-pvp-axis {
+  stroke: color-mix(in srgb, var(--bsg-wave) 70%, transparent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.bsg-pvp-axis-label {
+  fill: var(--bsg-wave);
+  font-size: 11px;
+  font-family: var(--bsg-font);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.bsg-pvp-diagonal {
+  stroke: color-mix(in srgb, var(--bsg-ink-dim) 45%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+.bsg-pvp-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--bsg-ink-dim);
+}
+.bsg-pvp-key { display: inline-flex; align-items: center; gap: 0.35rem; }
+.bsg-pvp-key::before {
+  content: "";
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: currentcolor;
+}
+.bsg-pvp-key[data-player="you"] { color: var(--bsg-wave); }
+.bsg-pvp-key[data-player="opponent"] { color: var(--bsg-accent); }
+.bsg-pvp-key[data-player="perfect"]::before {
+  background: repeating-linear-gradient(90deg, currentcolor 0 4px, transparent 4px 8px);
+}
