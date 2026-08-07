@@ -221,6 +221,53 @@ describe("PvpScreen", () => {
     expect(screen.getByTestId("pvp-your-score")).toHaveTextContent("7000");
   });
 
+  it("polls for the result when you finish first, then shows the summary", async () => {
+    // Regression: finishing your own rounds is not the end of the match — the
+    // result only exists once the opponent finishes too. This used to land in a
+    // dead "waiting…" screen that never updated, so whoever answered fastest
+    // never saw the summary at all.
+    const entries = [entry(0, 0.8, 0.7), entry(1, 0.6, 0.9)];
+    const youDone = {
+      you: { answered: 10, score: 7000, entries },
+      opponent: { answered: 9, score: 3600, entries: [entry(0, 0.3, 0.2)] },
+      next: null,
+      completed: false,
+      result: null,
+    };
+    const bothDone = {
+      you: { answered: 10, score: 7000, entries },
+      opponent: { answered: 10, score: 4000, entries: [entry(0, 0.3, 0.2), entry(1, 0.4, 0.3)] },
+      next: null,
+      completed: true,
+      result: {
+        winner: "opponent",
+        margin: 0.4,
+        score_margin: 400,
+        you_end: { x: 1.4, y: 1.6 },
+        opponent_end: { x: 1.6, y: 1.8 },
+      },
+    };
+    let reads = 0;
+    server.use(
+      http.get(`/api/pvp/${CODE}/`, () => {
+        reads += 1;
+        // The friend is still playing on the first read, done by the next poll.
+        return HttpResponse.json(state(reads === 1 ? youDone : bothDone));
+      }),
+    );
+    render(<PvpScreen joinCode={CODE} />);
+
+    // First: an informative wait, not a dead end.
+    expect(await screen.findByTestId("pvp-awaiting-result")).toBeInTheDocument();
+    expect(screen.getByText(/waiting for your friend to finish/i)).toBeInTheDocument();
+
+    // Then the poll picks up the finished match and the summary appears —
+    // including for the player who lost.
+    expect(await screen.findByText(/your friend takes it/i, undefined, { timeout: 8000 })).toBeInTheDocument();
+    expect(screen.getByTestId("pvp-diagram")).toBeInTheDocument();
+    expect(reads).toBeGreaterThanOrEqual(2);
+  }, 10000);
+
   it("surfaces a failure with a retry", async () => {
     server.use(http.get(`/api/pvp/${CODE}/`, () => new HttpResponse(null, { status: 500 })));
     render(<PvpScreen joinCode={CODE} />);

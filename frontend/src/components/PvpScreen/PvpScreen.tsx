@@ -94,6 +94,22 @@ export default function PvpScreen({ joinCode, onExit, className }: PvpScreenProp
             rounds={match.total}
             onDone={onExit}
           />
+        ) : phase === "awaiting-result" && match ? (
+          <div className="bsg-pvp-waiting" role="status" data-testid="pvp-awaiting-result">
+            <p className="bsg-play-loading">
+              All done! Waiting for your friend to finish their {match.total - match.opponent.answered}{" "}
+              remaining {match.opponent.answered === match.total - 1 ? "round" : "rounds"}…
+            </p>
+            <p className="bsg-pvp-option-hint">
+              You scored {Math.round(match.you.score)}. The result appears here as soon as they
+              finish — you can leave and come back to this link.
+            </p>
+            {onExit ? (
+              <button type="button" className="bsg-btn" onClick={onExit}>
+                Back to the game
+              </button>
+            ) : null}
+          </div>
         ) : phase === "done" ? (
           <p className="bsg-play-loading" role="status">
             Waiting for your friend to finish their rounds…

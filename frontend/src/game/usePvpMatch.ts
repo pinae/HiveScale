@@ -26,8 +26,13 @@ export type PvpPhase =
   | "guessing"
   | "submitting"
   | "revealing"
+  /** You've answered every round; the opponent hasn't finished theirs yet. */
+  | "awaiting-result"
   | "done"
   | "error";
+
+/** How often to re-check a finished-but-not-complete match for the result. */
+export const RESULT_POLL_MS = 4000;
 
 export interface PvpMatchLoop {
   phase: PvpPhase;
@@ -59,11 +64,22 @@ export function usePvpMatch(joinCode: string): PvpMatchLoop {
     matchRef.current = match;
   });
 
+  /** Land on the right terminal phase, or return false if there's a round to play.
+   *
+   * Finishing your own rounds is *not* the end of the match: the result only
+   * exists once the opponent has finished theirs too. Those two cases used to
+   * collapse into "done", which left whoever finished first staring at a
+   * "waiting…" screen forever — `awaiting-result` polls instead.
+   */
   const applyState = useCallback((state: PvpMatchState) => {
     setMatch(state);
     matchRef.current = state;
-    if (state.completed || state.next === null) {
+    if (state.completed) {
       setPhase("done");
+      return true;
+    }
+    if (state.next === null) {
+      setPhase("awaiting-result");
       return true;
     }
     return false;
@@ -89,11 +105,7 @@ export function usePvpMatch(joinCode: string): PvpMatchLoop {
         if (run !== runRef.current) return; // superseded (unmounted or retried)
         if (!result.waiting) {
           const next = result as PvpMatchState;
-          setMatch(next);
-          matchRef.current = next;
-          if (next.completed || next.next === null) {
-            setPhase("done");
-          } else {
+          if (!applyState(next)) {
             setGuess(DEFAULT_GUESS);
             setReveal(null);
             setSubmittedGuess(null);
@@ -104,7 +116,7 @@ export function usePvpMatch(joinCode: string): PvpMatchLoop {
         index = result.index ?? index;
       }
     },
-    [joinCode],
+    [joinCode, applyState],
   );
 
   const load = useCallback(async () => {
@@ -148,12 +160,16 @@ export function usePvpMatch(joinCode: string): PvpMatchLoop {
     }
   }, [joinCode]);
 
-  /** Leave the reveal: either the match is over, or wait for the next barrier. */
+  /** Leave the reveal: to the result, to waiting for it, or to the next barrier. */
   const next = useCallback(() => {
     const state = matchRef.current;
     if (!state) return;
-    if (state.completed || state.next === null) {
+    if (state.completed) {
       setPhase("done");
+      return;
+    }
+    if (state.next === null) {
+      setPhase("awaiting-result");
       return;
     }
     void awaitRound(state);
@@ -173,6 +189,32 @@ export function usePvpMatch(joinCode: string): PvpMatchLoop {
       runRef.current += 1; // stop the poll loop from updating an unmounted tree
     };
   }, [load]);
+
+  // You're done but your friend isn't: keep checking until the match completes,
+  // then show the summary. Without this the player who finished first never sees
+  // the result — the very case where they answered fastest.
+  useEffect(() => {
+    if (phase !== "awaiting-result") return;
+    const run = runRef.current;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      try {
+        const state = await fetchPvpMatch(joinCode);
+        if (run !== runRef.current) return;
+        setMatch(state);
+        matchRef.current = state;
+        if (state.completed) {
+          setPhase("done");
+          return;
+        }
+      } catch {
+        /* transient: just try again on the next tick */
+      }
+      if (run === runRef.current) timer = setTimeout(tick, RESULT_POLL_MS);
+    };
+    timer = setTimeout(tick, RESULT_POLL_MS);
+    return () => clearTimeout(timer);
+  }, [phase, joinCode]);
 
   return {
     phase,
