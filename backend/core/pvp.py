@@ -318,7 +318,13 @@ def match_state(match: PvpMatch, player) -> dict:
     answered = {e.index for e in mine}
     next_index = next((i for i in range(total) if i not in answered), None)
     nxt = None
-    if next_index is not None and match.is_full:
+    # `next` describes the slot you'd play next whenever one exists — including
+    # while the match is still waiting for an opponent. It is null *only* when you
+    # have answered every slot, so the client can read that as "you're finished"
+    # without confusing it with "nobody has joined yet" (`opponent_joined` says
+    # that). The slot stays blind either way: `started` can't be true before both
+    # players release the barrier, so no question text goes out early.
+    if next_index is not None:
         row = PvpRound.objects.filter(match=match, index=next_index).first()
         started = row is not None and row.started_at is not None
         nxt = {

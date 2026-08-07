@@ -164,6 +164,43 @@ def test_the_blind_deal_is_withheld_until_the_barrier_releases() -> None:
     assert ready["thing"]["text"]
 
 
+def test_a_match_waiting_for_an_opponent_still_offers_your_next_slot() -> None:
+    """Regression: `next` used to be withheld until someone joined, which the
+    client read as "you've answered everything" — so a player who opened their own
+    battle link first was told they were done and shown a 0-point wait screen."""
+    _pool()
+    a = _player("a")
+    match = pvp.create_match(a)  # nobody has joined yet
+
+    state = pvp.match_state(match, a)
+    assert state["opponent_joined"] is False
+    assert state["completed"] is False
+    assert state["you"]["answered"] == 0
+    # There *is* a next slot — it just can't start yet.
+    assert state["next"] is not None
+    assert state["next"]["index"] == 0
+    assert state["next"]["started"] is False
+    assert "thing" not in state["next"]  # and it stays blind
+
+
+def test_next_is_null_only_once_you_have_answered_every_slot() -> None:
+    _pool()
+    a, b = _player("a"), _player("b")
+    match = pvp.create_match(a)
+    match = pvp.join_match(b, match.join_code)
+
+    for i in range(pvp.MATCH_SIZE):
+        assert pvp.match_state(match, a)["next"]["index"] == i
+        _answer(match, a, i, seconds_taken=4)
+
+    # Only now, with every slot answered, does `next` go away.
+    finished = pvp.match_state(match, a)
+    assert finished["next"] is None
+    assert finished["you"]["answered"] == pvp.MATCH_SIZE
+    assert finished["completed"] is False  # b hasn't played: no result yet
+    assert finished["result"] is None
+
+
 def test_wait_for_start_returns_none_when_the_other_player_never_arrives() -> None:
     _pool()
     a, b = _player("a"), _player("b")

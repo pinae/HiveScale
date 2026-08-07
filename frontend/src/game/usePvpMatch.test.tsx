@@ -67,6 +67,7 @@ const bothDone = {
 
 beforeEach(() => {
   vi.mocked(client.fetchPvpMatch).mockReset();
+  vi.mocked(client.readyForPvpRound).mockReset();
   // Fake timers must be installed *before* the hook schedules its poll, so they
   // are on for the whole test; `settle` then drives both timers and promises.
   vi.useFakeTimers();
@@ -78,6 +79,49 @@ afterEach(() => {
 /** Advance the clock and flush the promises that resolve because of it. */
 const settle = (ms = 0) => act(async () => {
   await vi.advanceTimersByTimeAsync(ms);
+});
+
+/** Your own slot 0, still blind because nobody has joined to release it. */
+const waitingForOpponent = {
+  ...base,
+  opponent_joined: false,
+  you: { answered: 0, score: 0, entries: [] },
+  opponent: { answered: 0, score: 0, entries: [] },
+  next: { index: 0, started: false, opponent_ready: false },
+  completed: false,
+  result: null,
+} as unknown as client.PvpMatchState;
+
+describe("usePvpMatch — joining", () => {
+  it("waits at the barrier when nobody has joined — it is not 'you are done'", async () => {
+    // Regression: an unjoined match has no *playable* slot, which used to look
+    // identical to having answered everything, so the first player in was told
+    // "All done! …You scored 0".
+    vi.mocked(client.fetchPvpMatch).mockResolvedValue(waitingForOpponent);
+    vi.mocked(client.readyForPvpRound).mockResolvedValue({ waiting: true, index: 0 });
+
+    const { result } = renderHook(() => usePvpMatch("abc"));
+    await settle();
+
+    expect(result.current.phase).toBe("waiting");
+    expect(result.current.phase).not.toBe("awaiting-result");
+    expect(result.current.match?.opponent_joined).toBe(false);
+  });
+
+  it("never calls an unplayed match finished, even if `next` goes missing", async () => {
+    // Defence in depth: a payload with no next slot but nothing answered is
+    // inconsistent — it must not strand the player on the finished screen.
+    vi.mocked(client.fetchPvpMatch).mockResolvedValue({
+      ...waitingForOpponent,
+      next: null,
+    } as unknown as client.PvpMatchState);
+    vi.mocked(client.readyForPvpRound).mockResolvedValue({ waiting: true, index: 0 });
+
+    const { result } = renderHook(() => usePvpMatch("abc"));
+    await settle();
+
+    expect(result.current.phase).not.toBe("awaiting-result");
+  });
 });
 
 describe("usePvpMatch — finishing", () => {

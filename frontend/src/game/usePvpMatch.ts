@@ -34,6 +34,13 @@ export type PvpPhase =
 /** How often to re-check a finished-but-not-complete match for the result. */
 export const RESULT_POLL_MS = 4000;
 
+/** Floor between barrier polls. The server normally parks the request for ~20s,
+ * so this rarely bites — but it stops a fast-returning server (a short poll
+ * window, a proxy answering early) from turning the retry loop into a spin. */
+export const READY_RETRY_MS = 500;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export interface PvpMatchLoop {
   phase: PvpPhase;
   match: PvpMatchState | null;
@@ -78,7 +85,11 @@ export function usePvpMatch(joinCode: string): PvpMatchLoop {
       setPhase("done");
       return true;
     }
-    if (state.next === null) {
+    // Only "you have answered every slot" ends your play. Checking the count as
+    // well as `next` means a state that says neither (an older server, a partial
+    // payload) can't strand you on a "waiting for your friend to finish" screen
+    // when you have not actually played anything.
+    if (state.next === null && state.you.answered >= state.total) {
       setPhase("awaiting-result");
       return true;
     }
@@ -114,6 +125,7 @@ export function usePvpMatch(joinCode: string): PvpMatchLoop {
           return;
         }
         index = result.index ?? index;
+        await wait(READY_RETRY_MS); // never busy-loop if the server answers fast
       }
     },
     [joinCode, applyState],
