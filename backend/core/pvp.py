@@ -19,6 +19,9 @@ Design rules:
 - **Scoring reuses the round loop.** ``round_api.score_and_record`` does the
   scoring, so a PvP answer counts for the dataset, XP, and streaks exactly like
   any other round; the match only layers the duel on top.
+- **Only the challenger is level-gated.** Starting a battle is the unlocked
+  feature (``MULTIPLAYER_LEVEL``); accepting one is not, so a friend who has
+  never played can follow an invite and play the whole match at level 1.
 """
 
 from __future__ import annotations

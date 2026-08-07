@@ -8,6 +8,9 @@ Endpoints
 ``POST /api/pvp/<code>/ready/``       barrier: long-poll until both players are in
 ``POST /api/pvp/<code>/guess/``       answer the current slot
 
+Starting a battle needs ``MULTIPLAYER_LEVEL``; joining and playing one needs only
+a session, so a challenged friend can play at any level.
+
 The blind guarantee holds throughout: a slot's thing/scale is only serialised
 once both players have released the barrier for it, and no distribution data
 leaves before the answer is in (that lives in the reveal from ``score_and_record``).
@@ -40,11 +43,28 @@ _CAPTCHA_SALT = "hivescale.pvp-captcha"
 _SLOT_SALT = "hivescale.pvp-slot"
 
 
-def _gate(request):
-    """(player, None) when allowed to use PvP, else (None, error response)."""
+def _player_gate(request):
+    """(player, None) for any signed-in player, else (None, error response).
+
+    This is all a *participant* needs: being challenged is an invitation into the
+    game, so an opponent plays at any level — including someone who has never
+    played before and arrives straight from the invite link.
+    """
     player = resolve_player(request)
     if player is None:
         return None, Response({"detail": "No active session."}, status=status.HTTP_401_UNAUTHORIZED)
+    return player, None
+
+
+def _gate(request):
+    """(player, None) when allowed to *start* a battle, else (None, error).
+
+    Only the challenger is level-gated — starting battles is the unlocked
+    feature; accepting one is not.
+    """
+    player, denied = _player_gate(request)
+    if denied is not None:
+        return None, denied
     if player.level < pvp.multiplayer_level():
         return None, Response(
             {"detail": f"Reach level {pvp.multiplayer_level()} to battle a friend."},
@@ -189,7 +209,7 @@ def pvp_start(request) -> Response:
 @api_view(["GET"])
 def pvp_match(request, join_code: str) -> Response:
     """The caller's view of a match; the first new player to open it joins it."""
-    player, denied = _gate(request)
+    player, denied = _player_gate(request)
     if denied is not None:
         return denied
     match = _match_or_404(join_code)
@@ -211,7 +231,7 @@ def pvp_ready(request, join_code: str) -> Response:
     Returns the slot's deal once both are in; ``{"waiting": true}`` on timeout so
     the client can poll again immediately.
     """
-    player, denied = _gate(request)
+    player, denied = _player_gate(request)
     if denied is not None:
         return denied
     match = _match_or_404(join_code)
@@ -239,7 +259,7 @@ def pvp_ready(request, join_code: str) -> Response:
 @api_view(["POST"])
 def pvp_guess(request, join_code: str) -> Response:
     """Answer the current slot; returns the reveal plus the updated match state."""
-    player, denied = _gate(request)
+    player, denied = _player_gate(request)
     if denied is not None:
         return denied
     match = _match_or_404(join_code)

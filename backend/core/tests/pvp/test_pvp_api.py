@@ -83,12 +83,57 @@ def _aged_captcha_token(player: Player, pairing: Pairing, seconds: float = 6.0) 
 # --- Level gate ------------------------------------------------------------
 
 
-def test_pvp_is_level_gated() -> None:
+def test_starting_a_battle_is_level_gated() -> None:
     _pool()
     client = APIClient()
     _session(client, level=1)
     assert client.post(START_URL, {"mode": "link"}).status_code == status.HTTP_403_FORBIDDEN
     assert client.get(CAPTCHA_URL).status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_a_brand_new_player_can_be_challenged_at_any_level() -> None:
+    """Only the challenger needs the level — being invited is a way *into* the
+    game, so a friend who has never played can accept and play the whole match."""
+    _pool()
+    host = APIClient()
+    _session(host, level=9)
+    code = host.post(START_URL, {"mode": "link"}).json()["join_code"]
+
+    # A level-1 newcomer opens the link: they join, see the barrier, and play.
+    rookie = APIClient()
+    rookie_player = _session(rookie, level=1)
+    joined = rookie.get(f"/api/pvp/{code}/")
+    assert joined.status_code == status.HTTP_200_OK
+    assert PvpMatch.objects.get(join_code=code).opponent_id == rookie_player.pk
+
+    host.post(f"/api/pvp/{code}/ready/", {"index": 0}, format="json")
+    ready = rookie.post(f"/api/pvp/{code}/ready/", {"index": 0}, format="json")
+    assert ready.status_code == status.HTTP_200_OK
+    assert ready.json()["waiting"] is False
+
+    answered = rookie.post(
+        f"/api/pvp/{code}/guess/",
+        {
+            "pvp_token": ready.json()["next"]["pvp_token"],
+            "center": 50.0, "width_left": 12.0, "width_right": 12.0,
+        },
+        format="json",
+    )
+    assert answered.status_code == status.HTTP_200_OK
+    assert answered.json()["match"]["you"]["answered"] == 1
+
+
+def test_a_low_level_opponent_still_cannot_start_their_own_battle() -> None:
+    _pool()
+    host = APIClient()
+    _session(host, level=9)
+    code = host.post(START_URL, {"mode": "link"}).json()["join_code"]
+    rookie = APIClient()
+    _session(rookie, level=1)
+    rookie.get(f"/api/pvp/{code}/")  # joins fine
+
+    # ...but the unlock still governs starting one.
+    assert rookie.post(START_URL, {"mode": "link"}).status_code == status.HTTP_403_FORBIDDEN
 
 
 def test_pvp_needs_a_session() -> None:
