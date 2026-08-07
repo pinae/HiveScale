@@ -45,9 +45,18 @@ MATCH_SIZE = 10
 SPEED_BONUS = 2
 
 #: How long a ready-poll waits for the other player before returning "still
-#: waiting" so the client can poll again (kept under typical proxy read timeouts).
+#: waiting" so the client can poll again (kept under typical proxy read timeouts),
+#: and how often it re-checks while waiting. Both are settings so a deployment can
+#: match its proxy — and so tests can collapse the wait instead of really sleeping.
 READY_POLL_SECONDS = 20.0
-_READY_TICK_SECONDS = 0.4
+READY_TICK_SECONDS = 0.4
+
+
+def _poll_window() -> tuple[float, float]:
+    return (
+        float(getattr(settings, "PVP_READY_POLL_SECONDS", READY_POLL_SECONDS)),
+        float(getattr(settings, "PVP_READY_TICK_SECONDS", READY_TICK_SECONDS)),
+    )
 
 DEFAULT_MULTIPLAYER_LEVEL = 4
 
@@ -151,13 +160,17 @@ def mark_ready(match: PvpMatch, player, index: int) -> PvpRound:
 
 
 def wait_for_start(
-    match: PvpMatch, index: int, timeout: float = READY_POLL_SECONDS
+    match: PvpMatch, index: int, timeout: float | None = None
 ) -> PvpRound | None:
     """Long-poll until the barrier for ``index`` releases; ``None`` on timeout.
 
     The cache flag is only an accelerator — the database row is authoritative, so
-    a cold cache (or no Redis at all) merely means waiting a tick longer.
+    a cold cache (or no Redis at all) merely means waiting a tick longer. With a
+    zero timeout this is a single non-blocking check.
     """
+    window, tick = _poll_window()
+    if timeout is None:
+        timeout = window
     deadline = time.monotonic() + timeout
     while True:
         if cache.get(_started_cache_key(match.pk, index)) is not None:
@@ -169,7 +182,7 @@ def wait_for_start(
             return row
         if time.monotonic() >= deadline:
             return None
-        time.sleep(_READY_TICK_SECONDS)
+        time.sleep(tick)
 
 
 # ---------------------------------------------------------------------------

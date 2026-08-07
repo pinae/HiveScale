@@ -213,6 +213,11 @@ CONTENT_SUGGEST_LEVEL = int(os.environ.get("CONTENT_SUGGEST_LEVEL", "10"))
 DAILY_WAVE_LEVEL = int(os.environ.get("CONTENT_DAILY_WAVE_LEVEL", "3"))
 # Player level that unlocks PvP matches (head-to-head wave against a friend).
 MULTIPLAYER_LEVEL = int(os.environ.get("MULTIPLAYER_LEVEL", "4"))
+# How long the PvP round barrier holds a request while waiting for the other
+# player, and how often it re-checks. Keep the window under the edge proxy's read
+# timeout; the client just polls again when it lapses. Tests set it to 0.
+PVP_READY_POLL_SECONDS = float(os.environ.get("PVP_READY_POLL_SECONDS", "20"))
+PVP_READY_TICK_SECONDS = float(os.environ.get("PVP_READY_TICK_SECONDS", "0.4"))
 # Days a pairing rests before it can headline another Daily Wave, so the same
 # question never lands on consecutive days (players remember them).
 DAILY_WAVE_COOLDOWN_DAYS = int(os.environ.get("DAILY_WAVE_COOLDOWN_DAYS", "30"))
